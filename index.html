@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AddressBridge — 日本語住所を英語・多言語に変換</title>
+
+  <!-- OGP -->
+  <meta property="og:title"       content="AddressBridge — 日本語住所を英語・多言語に変換" />
+  <meta property="og:description" content="日本語住所を9カ国語の国際郵便フォーマットに即変換。米英仏独伊加（英/仏）・韓国・台湾に対応。" />
+  <meta property="og:url"         content="https://addressconversion-93436.web.app" />
+  <meta property="og:image"       content="https://addressconversion-93436.web.app/assets/ogp.png" />
+  <meta property="og:type"        content="website" />
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;600;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
+
+  <!-- Main CSS -->
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+  <!-- ========== HEADER ========== -->
+  <header class="site-header">
+    <div class="airmail-stripe"></div>
+    <div class="header-inner">
+      <span class="header-icon" aria-hidden="true">✈</span>
+      <div>
+        <h1 class="header-title">AddressBridge</h1>
+        <p class="header-sub">日本語→英語・多言語変換</p>
+      </div>
+    </div>
+    <div class="airmail-stripe"></div>
+  </header>
+
+  <!-- ========== MAIN ========== -->
+  <main class="main-container">
+
+    <!-- ── 入力フォームセクション ── -->
+    <section class="section" id="form-section">
+      <h2 class="section-title">住所を入力してください</h2>
+
+      <!-- 郵便番号 -->
+      <div class="form-group">
+        <label for="input-zip">郵便番号<span class="required">*</span></label>
+        <div class="zip-input-wrap">
+          <span class="zip-prefix" aria-hidden="true">〒</span>
+          <input
+            type="text"
+            id="input-zip"
+            placeholder="例: 150-0002"
+            maxlength="8"
+            inputmode="numeric"
+            autocomplete="postal-code"
+          />
+        </div>
+        <div class="field-hint">7桁入力で都道府県・市区町村・町域名を自動補完します</div>
+        <div class="field-error" id="error-zip" role="alert"></div>
+      </div>
+
+      <!-- 都道府県 / 市区町村 -->
+      <div class="form-row">
+        <div class="form-group">
+          <label for="input-pref">都道府県<span class="required">*</span></label>
+          <input
+            type="text"
+            id="input-pref"
+            placeholder="東京都"
+            maxlength="10"
+            autocomplete="address-level1"
+          />
+          <div class="field-error" id="error-pref" role="alert"></div>
+        </div>
+        <div class="form-group">
+          <label for="input-city">市区町村<span class="required">*</span></label>
+          <input
+            type="text"
+            id="input-city"
+            placeholder="渋谷区"
+            maxlength="40"
+            autocomplete="address-level2"
+          />
+          <div class="field-error" id="error-city" role="alert"></div>
+        </div>
+      </div>
+
+      <!-- 町名・番地 -->
+      <div class="form-group">
+        <label for="input-town">町名・番地<span class="required">*</span></label>
+        <input
+          type="text"
+          id="input-town"
+          placeholder="渋谷1丁目2番3号"
+          maxlength="100"
+          autocomplete="address-level3"
+        />
+        <div class="field-error" id="error-town" role="alert"></div>
+      </div>
+
+      <!-- 建物名（任意） -->
+      <div class="form-group">
+        <label for="input-bldg">建物名・部屋番号（任意）</label>
+        <input
+          type="text"
+          id="input-bldg"
+          placeholder="○○ビル3F"
+          maxlength="100"
+          autocomplete="address-line2"
+        />
+      </div>
+
+      <!-- 警告バナー -->
+      <div class="warning-banner" id="warning-banner" role="alert" style="display:none;">
+        ⚠ 入力された住所が郵便番号と一致しない可能性があります。ご確認ください。
+      </div>
+
+      <div class="form-actions">
+        <button type="button" id="btn-convert" class="btn-primary">変換する</button>
+      </div>
+    </section>
+
+    <!-- ── 地図セクション（変換後に表示） ── -->
+    <section class="section" id="map-section" style="display:none;">
+      <h2 class="section-title">📍 地図で確認</h2>
+      <div id="map-container" aria-label="住所の場所を示す地図">
+        <div class="map-error-overlay" id="map-error" style="display:none;">
+          地図を表示できませんでした
+        </div>
+      </div>
+    </section>
+
+    <!-- ── 変換結果セクション（変換後に表示） ── -->
+    <section class="section" id="result-section" style="display:none;">
+      <h2 class="section-title">変換結果</h2>
+
+      <!-- 言語タブ -->
+      <div class="lang-tabs" role="tablist">
+        <button class="lang-tab active" role="tab" data-locale="us"    aria-selected="true">🇺🇸 US</button>
+        <button class="lang-tab"        role="tab" data-locale="uk"    aria-selected="false">🇬🇧 UK</button>
+        <button class="lang-tab"        role="tab" data-locale="fr"    aria-selected="false">🇫🇷 FR</button>
+        <button class="lang-tab"        role="tab" data-locale="de"    aria-selected="false">🇩🇪 DE</button>
+        <button class="lang-tab"        role="tab" data-locale="it"    aria-selected="false">🇮🇹 IT</button>
+        <button class="lang-tab"        role="tab" data-locale="ca-en" aria-selected="false">🇨🇦 CA-EN</button>
+        <button class="lang-tab"        role="tab" data-locale="ca-fr" aria-selected="false">🇨🇦 CA-FR</button>
+        <button class="lang-tab"        role="tab" data-locale="kr"    aria-selected="false">🇰🇷 KR</button>
+        <button class="lang-tab"        role="tab" data-locale="tw"    aria-selected="false">🇹🇼 TW</button>
+      </div>
+
+      <!-- 結果テキスト -->
+      <div class="result-area">
+        <div class="lang-label" id="result-lang-label">American English</div>
+        <pre class="result-text" id="result-text"></pre>
+        <div class="result-aux" id="result-aux" style="display:none;">
+          <div class="aux-label">参考（現地語補助）:</div>
+          <pre class="aux-text" id="aux-text"></pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── プレビューセクション（変換後に表示） ── -->
+    <section class="section" id="preview-section" style="display:none;">
+      <h2 class="section-title">プレビュー <span class="preview-locale-label" id="preview-locale-label"></span></h2>
+
+      <!-- プレビュー切り替えタブ -->
+      <div class="preview-tabs">
+        <button class="preview-tab active" data-preview="envelope">封筒</button>
+        <button class="preview-tab"        data-preview="postcard">はがき</button>
+        <button class="preview-tab"        data-preview="label">伝票</button>
+      </div>
+
+      <!-- 封筒プレビュー -->
+      <div class="preview-pane" id="preview-envelope">
+        <div class="envelope">
+          <div class="envelope-stripe"></div>
+          <div class="envelope-body">
+            <div class="envelope-from">
+              <div class="from-label">From</div>
+              <div class="from-address" id="from-address"></div>
+            </div>
+            <div class="envelope-deco">
+              <div class="airmail-stamp">AIR MAIL ✈</div>
+              <div class="stamp-box" aria-hidden="true"></div>
+            </div>
+            <div class="envelope-to">
+              <div class="to-label">To</div>
+              <pre class="to-address" id="envelope-to-address"></pre>
+            </div>
+          </div>
+          <div class="envelope-stripe"></div>
+        </div>
+        <div class="copy-row">
+          <button class="btn-copy" id="copy-envelope" aria-label="宛先住所をクリップボードにコピー">
+            📋 宛先住所をコピー
+          </button>
+        </div>
+      </div>
+
+      <!-- はがきプレビュー -->
+      <div class="preview-pane" id="preview-postcard" style="display:none;">
+        <div class="postcard">
+          <div class="postcard-left">
+            <div class="postcard-deco" aria-hidden="true">POST CARD</div>
+          </div>
+          <div class="postcard-right">
+            <div class="postcard-stamp-box" aria-hidden="true"></div>
+            <div class="postcard-zip-label">〒</div>
+            <div class="postcard-line"></div>
+            <div class="postcard-line"></div>
+            <div class="postcard-line"></div>
+            <pre class="postcard-address" id="postcard-address"></pre>
+          </div>
+        </div>
+        <div class="copy-row">
+          <button class="btn-copy" id="copy-postcard" aria-label="宛先住所をクリップボードにコピー">
+            📋 宛先住所をコピー
+          </button>
+        </div>
+      </div>
+
+      <!-- 伝票プレビュー -->
+      <div class="preview-pane" id="preview-label" style="display:none;">
+        <div class="shipping-label">
+          <div class="label-title">INTERNATIONAL SHIPPING LABEL</div>
+          <hr class="label-hr" />
+          <div class="label-section-title">SHIP TO:</div>
+          <pre class="label-address" id="label-address"></pre>
+          <hr class="label-hr" />
+          <div class="label-section-title">FROM:</div>
+          <div class="label-from" id="label-from"></div>
+          <hr class="label-hr" />
+          <div class="label-footer">
+            <div class="barcode-deco" aria-hidden="true">||| |||| ||| || ||||| ||| ||||</div>
+            <div class="label-weight">Weight: __ kg</div>
+          </div>
+        </div>
+        <div class="copy-row">
+          <button class="btn-copy" id="copy-label" aria-label="宛先住所をクリップボードにコピー">
+            📋 宛先住所をコピー
+          </button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ========== FOOTER ========== -->
+  <footer class="site-footer">
+    <div class="airmail-stripe"></div>
+    <div class="footer-inner">
+      <div class="footer-section">
+        <h3 class="footer-heading">🔒 プライバシーについて</h3>
+        <p>本サービスは入力された住所情報をサーバーへ送信・収集しません。郵便番号の検索および地図表示に際し、zipcloud および OpenStreetMap Nominatim の外部 API を利用しています。</p>
+      </div>
+      <div class="footer-section">
+        <h3 class="footer-heading">📜 ライセンス</h3>
+        <p>© 2025 Kei —
+          <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a><br />
+          Creative Commons Attribution 4.0 International
+        </p>
+      </div>
+      <div class="footer-section">
+        <h3 class="footer-heading">⚠ 免責事項</h3>
+        <p>変換結果の正確性を保証するものではありません。実際の国際郵便・配送には各国郵便事業者の公式表記をご確認ください。</p>
+      </div>
+      <div class="footer-url">
+        AddressBridge —
+        <a href="https://addressconversion-93436.web.app" target="_blank" rel="noopener noreferrer">
+          addressconversion-93436.web.app
+        </a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- noscript -->
+  <noscript>
+    <div style="text-align:center;padding:40px;font-family:sans-serif;background:#fff3cd;margin:20px;">
+      <strong>JavaScript が無効です。</strong><br />
+      住所変換機能をご利用いただくには、ブラウザの JavaScript を有効にしてください。
+    </div>
+  </noscript>
+
+  <!-- スナックバー -->
+  <div class="snackbar" id="snackbar" role="status" aria-live="polite"></div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- App JS (ES Module) -->
+  <script type="module" src="js/main.js"></script>
+
+</body>
+</html>

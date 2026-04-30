@@ -1,0 +1,16 @@
+{
+  "name": "address-bridge",
+  "version": "1.0.0",
+  "private": true,
+  "description": "日本語住所を英語・多言語フォーマットに変換するWebアプリ",
+  "type": "module",
+  "scripts": {
+    "lint": "eslint js/",
+    "lint:fix": "eslint js/ --fix"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.0.0",
+    "eslint": "^9.0.0",
+    "globals": "^15.0.0"
+  }
+}

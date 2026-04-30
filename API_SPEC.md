@@ -1,0 +1,726 @@
+# API仕様書 — AddressBridge
+
+**バージョン**: 1.0  
+**作成日**: 2025-01-01  
+**対象**: 外部API・内部モジュールインターフェース
+
+---
+
+## 目次
+
+1. [外部API一覧](#1-外部api一覧)
+2. [zipcloud — 郵便番号検索API](#2-zipcloud--郵便番号検索api)
+3. [Nominatim — ジオコーディングAPI](#3-nominatim--ジオコーディングapi)
+4. [内部モジュールAPI](#4-内部モジュールapi)
+   - 4-1. [zipcloud.js](#4-1-zipcloudjs)
+   - 4-2. [geocoder.js](#4-2-geocoderjs)
+   - 4-3. [romanize.js](#4-3-romanizejs)
+   - 4-4. [converter.js](#4-4-converterjs)
+   - 4-5. [formats.js](#4-5-formatsjs)
+   - 4-6. [map.js](#4-6-mapjs)
+   - 4-7. [main.js](#4-7-mainjs)
+5. [データモデル定義](#5-データモデル定義)
+6. [エラーコード定義](#6-エラーコード定義)
+
+---
+
+## 1. 外部API一覧
+
+| API名 | 用途 | 認証 | 利用料 | Rate Limit |
+|-------|------|------|--------|-----------|
+| zipcloud | 郵便番号→住所変換・住所検証 | 不要 | 無料 | 明示なし（過度な呼び出し禁止） |
+| Nominatim | 住所→緯度経度変換（ジオコーディング） | 不要 | 無料 | 1 req/sec |
+
+---
+
+## 2. zipcloud — 郵便番号検索API
+
+### 2-1. 基本情報
+
+| 項目 | 値 |
+|------|----|
+| ベースURL | `https://zipcloud.ibsnet.co.jp/api/search` |
+| メソッド | `GET` |
+| 認証 | なし |
+| レスポンス形式 | `application/json` |
+| 文字コード | UTF-8 |
+| CORS | 対応（ブラウザから直接呼び出し可） |
+
+### 2-2. リクエストパラメータ
+
+| パラメータ名 | 型 | 必須 | 説明 | 例 |
+|------------|----|----|------|-----|
+| `zipcode` | string | ○ | 7桁の郵便番号（ハイフンなし） | `1500002` |
+| `callback` | string | △ | JSONP コールバック関数名（未使用） | — |
+| `limit` | integer | — | 返却件数上限（デフォルト20） | `1` |
+
+### 2-3. レスポンス
+
+#### 成功時（status: 200）
+
+```json
+{
+  "message": null,
+  "results": [
+    {
+      "address1": "東京都",
+      "address2": "渋谷区",
+      "address3": "渋谷",
+      "kana1": "トウキョウト",
+      "kana2": "シブヤク",
+      "kana3": "シブヤ",
+      "prefcode": "13",
+      "zipcode": "1500002"
+    }
+  ],
+  "status": 200
+}
+```
+
+#### 該当なし（status: 200, results: null）
+
+```json
+{
+  "message": null,
+  "results": null,
+  "status": 200
+}
+```
+
+#### エラー時（status: 400）
+
+```json
+{
+  "message": "パラメータ「zipcode」の値が不正です。",
+  "results": null,
+  "status": 400
+}
+```
+
+### 2-4. レスポンスフィールド定義
+
+| フィールド | 型 | 説明 |
+|-----------|----|----|
+| `status` | integer | 200: 成功, 400: パラメータエラー, 500: サーバーエラー |
+| `message` | string \| null | エラーメッセージ（成功時は null） |
+| `results` | array \| null | 住所データの配列（該当なし時は null） |
+| `results[].zipcode` | string | 7桁郵便番号 |
+| `results[].prefcode` | string | 都道府県コード（JIS X 0401） |
+| `results[].address1` | string | 都道府県名 |
+| `results[].address2` | string | 市区町村名 |
+| `results[].address3` | string | 町域名 |
+| `results[].kana1` | string | 都道府県名カナ |
+| `results[].kana2` | string | 市区町村名カナ |
+| `results[].kana3` | string | 町域名カナ |
+
+### 2-5. 呼び出しタイミング
+
+| タイミング | 用途 |
+|-----------|------|
+| 郵便番号が7桁（ハイフン除く）になった瞬間 | 住所自動補完 |
+| 変換ボタン押下時 | 住所検証（入力値との照合） |
+
+### 2-6. 住所検証ロジック
+
+```
+zipcloud レスポンスの address1 + address2 と
+入力フォームの 都道府県 + 市区町村 を比較
+
+一致: 警告なし
+不一致 or results=null: 警告バナー表示
+API エラー / ネットワーク障害: 検証スキップ（エラー表示なし）
+```
+
+---
+
+## 3. Nominatim — ジオコーディングAPI
+
+### 3-1. 基本情報
+
+| 項目 | 値 |
+|------|----|
+| ベースURL | `https://nominatim.openstreetmap.org/search` |
+| メソッド | `GET` |
+| 認証 | なし（User-Agent ヘッダー必須） |
+| レスポンス形式 | `application/json` |
+| Rate Limit | **1 req/sec**（超過するとブロックされる可能性あり） |
+| 利用規約 | https://operations.osmfoundation.org/policies/nominatim/ |
+
+> **重要**: `User-Agent` ヘッダーにサービス名と連絡先を含めること。
+> 商用・大量アクセスには独自インスタンスの構築を推奨。
+
+### 3-2. リクエストパラメータ
+
+| パラメータ名 | 型 | 必須 | 説明 | 使用値 |
+|------------|----|----|------|--------|
+| `q` | string | ○ | 検索クエリ（住所文字列） | `渋谷区渋谷1-2-3, 東京都, 日本` |
+| `format` | string | ○ | レスポンス形式 | `json` |
+| `limit` | integer | — | 返却件数 | `1` |
+| `countrycodes` | string | — | 対象国コード（ISO 3166-1 alpha-2） | `jp` |
+| `addressdetails` | integer | — | 住所詳細を含むか | `0` |
+
+### 3-3. リクエストヘッダー
+
+| ヘッダー名 | 値 | 必須 |
+|-----------|-----|------|
+| `User-Agent` | `AddressBridge/1.0 (your-contact@example.com)` | ○（利用規約上必須） |
+| `Accept-Language` | `ja` | 推奨 |
+
+### 3-4. レスポンス
+
+#### 成功時（1件以上ヒット）
+
+```json
+[
+  {
+    "place_id": 123456789,
+    "licence": "Data © OpenStreetMap contributors, ODbL 1.0.",
+    "osm_type": "way",
+    "osm_id": 987654321,
+    "lat": "35.6584421",
+    "lon": "139.7022068",
+    "class": "place",
+    "type": "neighbourhood",
+    "place_rank": 25,
+    "importance": 0.5,
+    "addresstype": "neighbourhood",
+    "name": "渋谷",
+    "display_name": "渋谷, 渋谷区, 東京都, 150-0002, 日本",
+    "boundingbox": ["35.655", "35.662", "139.698", "139.708"]
+  }
+]
+```
+
+#### 該当なし時
+
+```json
+[]
+```
+
+### 3-5. 使用フィールド
+
+| フィールド | 用途 |
+|-----------|------|
+| `lat` | Leaflet マーカーの緯度 |
+| `lon` | Leaflet マーカーの経度 |
+
+### 3-6. 検索クエリの構築
+
+```javascript
+// 入力値から検索クエリを組み立てる
+function buildGeoQuery(address) {
+  const parts = [
+    address.town,    // 町名・番地
+    address.city,    // 市区町村
+    address.pref,    // 都道府県
+    '日本'
+  ].filter(Boolean);
+  return parts.join(', ');
+}
+```
+
+### 3-7. Rate Limit 対策
+
+```javascript
+// 変換ボタン押下1回につき1リクエストのみ
+// デバウンス不要（ユーザー操作起点のため）
+// Nominatim への連続呼び出しが発生しないよう設計
+```
+
+---
+
+## 4. 内部モジュールAPI
+
+モジュールはすべてグローバルオブジェクト（または ES Module `export`）として公開する。
+Firebase Hosting は静的ホスティングのみのため、バンドラーなしで動作させる。
+
+---
+
+### 4-1. zipcloud.js
+
+#### `ZipCloud.lookup(zipcode)`
+
+郵便番号から住所を取得する。
+
+| 項目 | 内容 |
+|------|------|
+| 引数 | `zipcode` {string} — 7桁数字（ハイフンあり/なし両対応） |
+| 戻り値 | `Promise<ZipResult \| null>` |
+| エラー | ネットワーク障害時は `null` を返す（例外をスローしない） |
+
+```javascript
+/**
+ * @typedef {Object} ZipResult
+ * @property {string} zipcode  - 7桁郵便番号
+ * @property {string} pref     - 都道府県名
+ * @property {string} city     - 市区町村名
+ * @property {string} town     - 町域名
+ * @property {string} prefcode - 都道府県コード
+ */
+
+// 使用例
+const result = await ZipCloud.lookup('1500002');
+// => { zipcode: '1500002', pref: '東京都', city: '渋谷区', town: '渋谷', prefcode: '13' }
+// 該当なし・エラー時: null
+```
+
+#### `ZipCloud.validate(zipcode, pref, city)`
+
+郵便番号と入力した都道府県・市区町村の整合性を検証する。
+
+| 項目 | 内容 |
+|------|------|
+| 引数 | `zipcode` {string}, `pref` {string}, `city` {string} |
+| 戻り値 | `Promise<'match' \| 'mismatch' \| 'skip'>` |
+
+```javascript
+// 'match'    : API結果と入力が一致
+// 'mismatch' : 不一致（警告表示）
+// 'skip'     : API未応答またはエラー（警告表示しない）
+```
+
+#### `ZipCloud.normalizeZip(input)`
+
+入力文字列を7桁数字に正規化する（ハイフン除去）。
+
+| 項目 | 内容 |
+|------|------|
+| 引数 | `input` {string} |
+| 戻り値 | {string} — ハイフンなし7桁。7桁未満は空文字列 |
+
+```javascript
+ZipCloud.normalizeZip('150-0002') // => '1500002'
+ZipCloud.normalizeZip('1500002')  // => '1500002'
+ZipCloud.normalizeZip('150-00')   // => ''
+```
+
+---
+
+### 4-2. geocoder.js
+
+#### `Geocoder.search(address)`
+
+住所オブジェクトから緯度経度を取得する。
+
+| 項目 | 内容 |
+|------|------|
+| 引数 | `address` {AddressInput} |
+| 戻り値 | `Promise<LatLon \| null>` |
+| エラー | 失敗・未ヒット時は `null` を返す |
+
+```javascript
+/**
+ * @typedef {Object} LatLon
+ * @property {number} lat
+ * @property {number} lon
+ */
+
+const pos = await Geocoder.search({
+  pref: '東京都',
+  city: '渋谷区',
+  town: '渋谷1丁目2番3号'
+});
+// => { lat: 35.658, lon: 139.702 }
+// 失敗時: null
+```
+
+---
+
+### 4-3. romanize.js
+
+日本語文字列をヘボン式ローマ字に変換するモジュール。
+
+#### `Romanize.convert(text)`
+
+ひらがな・カタカナをヘボン式ローマ字に変換する。
+漢字は変換できないため、住所の各フィールドはカナ表記を別途管理するか
+zipcloud のカナフィールドを利用する。
+
+| 項目 | 内容 |
+|------|------|
+| 引数 | `text` {string} — ひらがなまたはカタカナ |
+| 戻り値 | {string} — ヘボン式ローマ字（先頭大文字） |
+
+```javascript
+Romanize.convert('シブヤ')    // => 'Shibuya'
+Romanize.convert('とうきょう') // => 'Tokyo'
+Romanize.convert('おおさか')   // => 'Osaka'
+Romanize.convert('ほんまち')   // => 'Honmachi'
+```
+
+#### `Romanize.convertBanchi(text)`
+
+番地表記（丁目・番・号）をハイフン区切りに変換する。
+
+| 項目 | 内容 |
+|------|------|
+| 引数 | `text` {string} — 番地文字列 |
+| 戻り値 | {string} — ハイフン区切り番地 |
+
+```javascript
+Romanize.convertBanchi('1丁目2番3号') // => '1-2-3'
+Romanize.convertBanchi('3番地5')      // => '3-5'
+Romanize.convertBanchi('12番')        // => '12'
+```
+
+#### `Romanize.convertBldg(text)`
+
+建物名・部屋番号のローマ字化。
+
+| 項目 | 内容 |
+|------|------|
+| 引数 | `text` {string} |
+| 戻り値 | {string} — ローマ字 + 英数字 |
+
+```javascript
+Romanize.convertBldg('○○ビル3F')     // => 'OO Bldg 3F'
+Romanize.convertBldg('渋谷タワー201') // => 'Shibuya Tower 201'
+```
+
+#### ヘボン式変換テーブル（主要規則）
+
+| かな | ローマ字 | かな | ローマ字 |
+|------|---------|------|---------|
+| あ行 | a/i/u/e/o | さ行 | sa/shi/su/se/so |
+| た行 | ta/chi/tsu/te/to | な行 | na/ni/nu/ne/no |
+| は行 | ha/hi/fu/he/ho | ま行 | ma/mi/mu/me/mo |
+| や行 | ya/yu/yo | ら行 | ra/ri/ru/re/ro |
+| わ行 | wa/wi/we/wo/n | が行 | ga/gi/gu/ge/go |
+| ざ行 | za/ji/zu/ze/zo | だ行 | da/ji/zu/de/do |
+| ば行 | ba/bi/bu/be/bo | ぱ行 | pa/pi/pu/pe/po |
+| しゃ | sha | じゃ | ja |
+| ちゃ | cha | にゃ | nya |
+| つ（促音） | 次の子音を重ねる（tt/ss等） | ん | n（母音前: n'） |
+| 長音 | 短縮（おう→o, おお→o） | — | — |
+
+---
+
+### 4-4. converter.js
+
+住所変換のメインモジュール。
+
+#### `Converter.convertAll(address)`
+
+入力住所を全9言語フォーマットに変換する。
+
+| 項目 | 内容 |
+|------|------|
+| 引数 | `address` {AddressInput} |
+| 戻り値 | {ConversionResult} |
+
+```javascript
+/**
+ * @typedef {Object} AddressInput
+ * @property {string} zip    - 郵便番号（ハイフンなし7桁）
+ * @property {string} pref   - 都道府県名
+ * @property {string} city   - 市区町村名
+ * @property {string} town   - 町名・番地
+ * @property {string} [bldg] - 建物名・部屋番号（任意）
+ * @property {string} [prefKana] - 都道府県カナ（zipcloudから取得）
+ * @property {string} [cityKana] - 市区町村カナ（zipcloudから取得）
+ * @property {string} [townKana] - 町域カナ（zipcloudから取得）
+ */
+
+/**
+ * @typedef {Object} ConversionResult
+ * @property {string} us    - American English
+ * @property {string} uk    - British English
+ * @property {string} fr    - French
+ * @property {string} de    - German
+ * @property {string} it    - Italian
+ * @property {string} caEn  - Canadian English
+ * @property {string} caFr  - Canadian French
+ * @property {string} kr    - Korean
+ * @property {string} tw    - Traditional Chinese
+ * @property {Object} krAux - Korean 補助表示（現地語地名）
+ * @property {Object} twAux - Traditional Chinese 補助表示（現地語地名）
+ */
+
+const result = Converter.convertAll({
+  zip: '1500002',
+  pref: '東京都',
+  city: '渋谷区',
+  town: '渋谷1丁目2番3号',
+  bldg: '○○ビル3F',
+  prefKana: 'トウキョウト',
+  cityKana: 'シブヤク',
+  townKana: 'シブヤ'
+});
+```
+
+#### `Converter.convertTo(address, locale)`
+
+指定した1言語のフォーマットに変換する。
+
+| 項目 | 内容 |
+|------|------|
+| 引数 | `address` {AddressInput}, `locale` {LocaleCode} |
+| 戻り値 | {string} — 改行区切りの住所文字列 |
+
+```javascript
+// LocaleCode: 'us' | 'uk' | 'fr' | 'de' | 'it' | 'ca-en' | 'ca-fr' | 'kr' | 'tw'
+
+Converter.convertTo(address, 'us');
+// =>
+// "OO Bldg 3F\n1-2-3 Shibuya, Shibuya-ku\nTokyo 150-0002\nJAPAN"
+```
+
+#### `Converter.parseAddress(address)`
+
+住所を変換に使いやすい中間形式に分解する（内部用）。
+
+| 項目 | 内容 |
+|------|------|
+| 引数 | `address` {AddressInput} |
+| 戻り値 | {ParsedAddress} |
+
+```javascript
+/**
+ * @typedef {Object} ParsedAddress
+ * @property {string} prefRoman  - 都道府県ローマ字 (e.g. "Tokyo")
+ * @property {string} cityRoman  - 市区町村ローマ字 (e.g. "Shibuya-ku")
+ * @property {string} townRoman  - 町名ローマ字 (e.g. "Shibuya")
+ * @property {string} banchi     - 番地ハイフン形式 (e.g. "1-2-3")
+ * @property {string} bldgRoman  - 建物名ローマ字 (e.g. "OO Bldg 3F")
+ * @property {string} zip        - 郵便番号 (e.g. "150-0002")
+ * @property {string} prefLocal  - 都道府県現地語 (kr/tw用)
+ * @property {string} cityLocal  - 市区町村現地語 (kr/tw用)
+ */
+```
+
+---
+
+### 4-5. formats.js
+
+各国フォーマット定義と地名辞書を管理するモジュール。
+
+#### `Formats.get(locale)`
+
+指定ロケールのフォーマット関数を返す。
+
+| 項目 | 内容 |
+|------|------|
+| 引数 | `locale` {LocaleCode} |
+| 戻り値 | `(parsed: ParsedAddress) => string` |
+
+```javascript
+const formatter = Formats.get('us');
+formatter(parsed);
+// => "OO Bldg 3F\n1-2-3 Shibuya, Shibuya-ku\nTokyo 150-0002\nJAPAN"
+```
+
+#### `Formats.LOCALES`
+
+対応ロケール一覧の定数。
+
+```javascript
+Formats.LOCALES = ['us', 'uk', 'fr', 'de', 'it', 'ca-en', 'ca-fr', 'kr', 'tw'];
+```
+
+#### `Formats.COUNTRY_NAME`
+
+各ロケールにおける「日本」の表記。
+
+```javascript
+Formats.COUNTRY_NAME = {
+  us:    'JAPAN',
+  uk:    'JAPAN',
+  fr:    'JAPON',
+  de:    'JAPAN',
+  it:    'GIAPPONE',
+  caEn:  'JAPAN',
+  caFr:  'JAPON',
+  kr:    '일본',
+  tw:    '日本'
+};
+```
+
+#### `Formats.KR_DICT` / `Formats.TW_DICT`
+
+現地語地名辞書（47都道府県 + 主要市区）。
+
+```javascript
+// キー: 日本語地名, 値: 現地語表記
+Formats.KR_DICT = {
+  '東京都': '도쿄도',
+  '大阪府': '오사카부',
+  '渋谷区': '시부야구',
+  // ...
+};
+
+Formats.TW_DICT = {
+  '渋谷区': '澀谷區',
+  '横浜市': '橫濱市',
+  // 漢字共通のものはキーに含めない（そのまま使用）
+  // ...
+};
+```
+
+---
+
+### 4-6. map.js
+
+Leaflet 地図の操作モジュール。
+
+#### `MapController.init(elementId)`
+
+地図を初期化する。
+
+| 項目 | 内容 |
+|------|------|
+| 引数 | `elementId` {string} — 地図を描画する DOM 要素の ID |
+| 戻り値 | `void` |
+
+```javascript
+MapController.init('map-container');
+```
+
+#### `MapController.show(lat, lon, label)`
+
+指定座標にマーカーを立てて地図を表示する。
+
+| 項目 | 内容 |
+|------|------|
+| 引数 | `lat` {number}, `lon` {number}, `label` {string} — ポップアップテキスト |
+| 戻り値 | `void` |
+
+```javascript
+MapController.show(35.6584, 139.7022, '東京都渋谷区渋谷1丁目2番3号');
+```
+
+#### `MapController.hide()`
+
+地図エリアを非表示にする。
+
+#### `MapController.showError()`
+
+ジオコーディング失敗時のエラー表示に切り替える。
+
+---
+
+### 4-7. main.js
+
+アプリケーションのエントリーポイント。各モジュールを統合し、イベントを管理する。
+
+#### イベントハンドラー一覧
+
+| イベント | ハンドラー | 処理概要 |
+|---------|-----------|---------|
+| `input-zip` の `input` | `onZipInput()` | ハイフン自動挿入、7桁で補完API呼び出し |
+| `btn-autocomplete` の `click` | `onAutocomplete()` | zipcloud 補完処理 |
+| `btn-convert` の `click` | `onConvert()` | バリデーション→検証→変換→地図→表示 |
+| 言語タブの `click` | `onTabChange(locale)` | 変換結果・プレビューの切り替え |
+| プレビュータブの `click` | `onPreviewChange(type)` | 封筒/はがき/伝票の切り替え |
+| コピーボタンの `click` | `onCopy(locale)` | クリップボードコピー |
+
+#### `onConvert()` 処理フロー
+
+```javascript
+async function onConvert() {
+  // 1. バリデーション
+  if (!validate()) return;
+
+  // 2. UI をローディング状態に
+  setLoading(true);
+
+  // 3. 住所検証
+  const validationResult = await ZipCloud.validate(zip, pref, city);
+  showWarning(validationResult === 'mismatch');
+
+  // 4. 変換処理
+  const result = Converter.convertAll(getAddressInput());
+
+  // 5. ジオコーディング（並行して実行）
+  const pos = await Geocoder.search(getAddressInput());
+
+  // 6. 結果表示
+  renderResults(result);
+  if (pos) {
+    MapController.show(pos.lat, pos.lon, buildJaLabel());
+  } else {
+    MapController.showError();
+  }
+
+  // 7. 結果エリアへスクロール
+  scrollToResults();
+
+  setLoading(false);
+}
+```
+
+---
+
+## 5. データモデル定義
+
+### 5-1. AddressInput
+
+フォームから収集した住所データ。
+
+```typescript
+interface AddressInput {
+  zip:      string;   // 7桁数字（ハイフンなし）
+  pref:     string;   // 都道府県名（例: 東京都）
+  city:     string;   // 市区町村名（例: 渋谷区）
+  town:     string;   // 町名・番地（例: 渋谷1丁目2番3号）
+  bldg?:    string;   // 建物名・部屋番号（省略可）
+  prefKana?: string;  // 都道府県カナ（zipcloudから取得、省略可）
+  cityKana?: string;  // 市区町村カナ（zipcloudから取得、省略可）
+  townKana?: string;  // 町域カナ（zipcloudから取得、省略可）
+}
+```
+
+### 5-2. ConversionResult
+
+変換結果オブジェクト。
+
+```typescript
+interface ConversionResult {
+  us:    string;  // American English（改行区切り）
+  uk:    string;  // British English
+  fr:    string;  // French
+  de:    string;  // German
+  it:    string;  // Italian
+  caEn:  string;  // Canadian English
+  caFr:  string;  // Canadian French
+  kr:    string;  // Korean（ローマ字メイン）
+  tw:    string;  // Traditional Chinese（漢字/ローマ字メイン）
+  krAux: string;  // Korean 補助（現地語地名）
+  twAux: string;  // Traditional Chinese 補助（繁体字地名）
+}
+```
+
+### 5-3. LocaleCode
+
+```typescript
+type LocaleCode = 'us' | 'uk' | 'fr' | 'de' | 'it' | 'ca-en' | 'ca-fr' | 'kr' | 'tw';
+```
+
+### 5-4. ValidationResult
+
+```typescript
+type ValidationResult = 'match' | 'mismatch' | 'skip';
+```
+
+---
+
+## 6. エラーコード定義
+
+アプリ内部で使用するエラー種別の定数。
+
+| 定数名 | 値 | 説明 |
+|-------|----|------|
+| `ERR_ZIP_INVALID` | `'ZIP_INVALID'` | 郵便番号の形式が不正 |
+| `ERR_ZIP_NOT_FOUND` | `'ZIP_NOT_FOUND'` | 郵便番号が存在しない |
+| `ERR_ZIP_API_FAIL` | `'ZIP_API_FAIL'` | zipcloud API 通信エラー |
+| `ERR_GEO_NOT_FOUND` | `'GEO_NOT_FOUND'` | ジオコーディング結果なし |
+| `ERR_GEO_API_FAIL` | `'GEO_API_FAIL'` | Nominatim API 通信エラー |
+| `ERR_REQUIRED_FIELD` | `'REQUIRED_FIELD'` | 必須フィールド未入力 |
+| `ERR_COPY_FAIL` | `'COPY_FAIL'` | クリップボードコピー失敗 |
+
+```javascript
+// エラー処理の基本方針
+// - ユーザー向けエラー（REQUIRED_FIELD, ZIP_INVALID）: フォームにエラー表示
+// - API エラー（ZIP_NOT_FOUND, GEO_NOT_FOUND）: 警告またはスキップ
+// - 通信エラー（ZIP_API_FAIL, GEO_API_FAIL）: サイレントスキップ
+// - コピーエラー（COPY_FAIL）: フォールバック処理（execCommand）
+```
