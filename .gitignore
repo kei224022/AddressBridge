@@ -5,3 +5,7 @@ node_modules/
 js/config.js
 task.md
 *.log
+.playwright-mcp/
+.serena/
+.vscode/
+ScreenShot/

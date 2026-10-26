@@ -81,7 +81,7 @@ body {
 .main-container {
   max-width: var(--max-width);
   margin: 0 auto;
-  padding: 24px 24px 48px;
+  padding: 20px 24px 48px;
 }
 
 /* --- Section Card --- */
@@ -89,7 +89,7 @@ body {
   background: var(--card-bg);
   border-radius: 8px;
   padding: 24px;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
 }
 
@@ -221,6 +221,7 @@ body {
   font-size: 12px;
   color: #999;
   margin-top: 4px;
+  line-height: 1.4;
 }
 
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -315,10 +316,16 @@ body {
 }
 
 /* --- Result Area --- */
+.result-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
 .lang-label {
   font-size: 13px;
   color: #888;
-  margin-bottom: 8px;
 }
 
 .result-text {
@@ -400,9 +407,15 @@ body {
   font-family: inherit;
   cursor: pointer;
   transition: background 0.15s;
+  white-space: nowrap;
 }
 
 .btn-copy:hover { background: #e0e0e0; }
+
+.btn-result-copy {
+  padding: 5px 12px;
+  font-size: 12px;
+}
 
 /* --- Envelope Preview --- */
 .envelope {
@@ -636,6 +649,16 @@ body {
   color: #666;
 }
 
+/* --- Ad Unit ---
+   AdSense 承認・実 Publisher ID 設定後に下記を変更:
+     max-height を削除、overflow を削除、margin: 0 0 24px に、min-height: 90px に */
+.ad-unit {
+  margin: 0;
+  min-height: 0;
+  max-height: 0;
+  overflow: hidden;
+}
+
 /* --- Footer --- */
 .site-footer {
   background: var(--footer-bg);
@@ -719,5 +742,5 @@ body {
 
 /* --- Responsive: PC (960px〜) --- */
 @media (min-width: 960px) {
-  .main-container { padding: 32px 24px 64px; }
+  .main-container { padding: 28px 24px 56px; }
 }

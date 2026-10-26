@@ -13,6 +13,12 @@
       "eslint.config.js",
       "package.json",
       "package-lock.json",
+      "phase4_test.mjs",
+      "pw_test.mjs",
+      "staging_test.mjs",
+      "gen_ogp.mjs",
+      "js/config.example.js",
+      "ScreenShot/**",
       "**/.*",
       "**/node_modules/**"
     ],

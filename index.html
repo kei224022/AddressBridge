@@ -5,6 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AddressBridge — 日本語住所を英語・多言語に変換</title>
 
+  <!-- Favicon -->
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
+  <link rel="icon" href="assets/favicon.svg" sizes="any" />
+
   <!-- OGP -->
   <meta property="og:title"       content="AddressBridge — 日本語住所を英語・多言語に変換" />
   <meta property="og:description" content="日本語住所を9カ国語の国際郵便フォーマットに即変換。米英仏独伊加（英/仏）・韓国・台湾に対応。" />
@@ -12,16 +16,17 @@
   <meta property="og:image"       content="https://addressconversion-93436.web.app/assets/ogp.png" />
   <meta property="og:type"        content="website" />
 
-  <!-- Leaflet CSS -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;600;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
 
   <!-- Main CSS -->
-  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/style.css?v=2" />
+
+  <!-- Google AdSense: 承認・Publisher ID 取得後に下記を解除すること -->
+  <!-- <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXXXXXX"
+    crossorigin="anonymous"></script> -->
 </head>
 <body>
 
@@ -124,6 +129,16 @@
       </div>
     </section>
 
+    <!-- ── 広告エリア A（承認後: ins タグを有効化し <script>(adsbygoogle||[]).push({})</script> を追記） ── -->
+    <div class="ad-unit" aria-hidden="true">
+      <ins class="adsbygoogle"
+        style="display:block"
+        data-ad-client="ca-pub-XXXXXXXXXXXXXXXX"
+        data-ad-slot="AAAAAAAAAA"
+        data-ad-format="auto"
+        data-full-width-responsive="true"></ins>
+    </div>
+
     <!-- ── 地図セクション（変換後に表示） ── -->
     <section class="section" id="map-section" style="display:none;">
       <h2 class="section-title">📍 地図で確認</h2>
@@ -153,7 +168,10 @@
 
       <!-- 結果テキスト -->
       <div class="result-area">
-        <div class="lang-label" id="result-lang-label">American English</div>
+        <div class="result-header">
+          <div class="lang-label" id="result-lang-label">American English</div>
+          <button class="btn-copy btn-result-copy" id="copy-result" aria-label="変換結果をクリップボードにコピー">📋 コピー</button>
+        </div>
         <pre class="result-text" id="result-text"></pre>
         <div class="result-aux" id="result-aux" style="display:none;">
           <div class="aux-label">参考（現地語補助）:</div>
@@ -161,6 +179,16 @@
         </div>
       </div>
     </section>
+
+    <!-- ── 広告エリア B（承認後: ins タグを有効化し <script>(adsbygoogle||[]).push({})</script> を追記） ── -->
+    <div class="ad-unit" aria-hidden="true">
+      <ins class="adsbygoogle"
+        style="display:block"
+        data-ad-client="ca-pub-XXXXXXXXXXXXXXXX"
+        data-ad-slot="BBBBBBBBBB"
+        data-ad-format="auto"
+        data-full-width-responsive="true"></ins>
+    </div>
 
     <!-- ── プレビューセクション（変換後に表示） ── -->
     <section class="section" id="preview-section" style="display:none;">
@@ -254,7 +282,7 @@
     <div class="footer-inner">
       <div class="footer-section">
         <h3 class="footer-heading">🔒 プライバシーについて</h3>
-        <p>本サービスは入力された住所情報をサーバーへ送信・収集しません。郵便番号の検索および地図表示に際し、zipcloud および OpenStreetMap Nominatim の外部 API を利用しています。</p>
+        <p>本サービスは入力された住所情報をサーバーへ送信・収集しません。郵便番号の検索に zipcloud、地図表示に Google Maps、建物名の翻訳に DeepL の外部 API を利用しています。</p>
       </div>
       <div class="footer-section">
         <h3 class="footer-heading">📜 ライセンス</h3>
@@ -287,10 +315,12 @@
   <!-- スナックバー -->
   <div class="snackbar" id="snackbar" role="status" aria-live="polite"></div>
 
-  <!-- Leaflet JS -->
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- initMap スタブ: Google Maps async が先に読み込まれても安全に受け取る -->
+  <script>window.initMap = function() { window._mapsApiReady = true; };</script>
   <!-- App JS (ES Module) -->
   <script type="module" src="js/main.js"></script>
+  <!-- Google Maps JavaScript API -->
+  <script async src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCoQUjo7T6_Kk8O45iMkFc9ioQ2C8cT-zE&callback=initMap"></script>
 
 </body>
 </html>

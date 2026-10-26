@@ -17,6 +17,7 @@
 
 import { convert, convertBanchi, convertBldg } from './romanize.js';
 import { get as getFormat, lookupKr, toTraditional } from './formats.js';
+import { DeepL } from './translator.js';
 
 // ─── 都道府県 接尾語テーブル ─────────────────────────────────────────────────
 
@@ -243,7 +244,11 @@ function getLocalNames(pref, city, locale) {
  * @returns {object} ParsedAddress
  */
 export function parseAddress(address) {
-  const { pref, city, town, bldg, prefKana, cityKana, townKana } = address;
+  const { pref, city, town, bldg } = address;
+  // zipcloud は半角カタカナ + 半角濁点で返す。NFKC で全角・合成形に統一する
+  const prefKana = (address.prefKana ?? '').normalize('NFKC');
+  const cityKana = (address.cityKana ?? '').normalize('NFKC');
+  const townKana = (address.townKana ?? '').normalize('NFKC');
 
   const zip = formatZip(address.zip);
   const { prefRoman, prefRomanFull } = buildPrefRoman(pref, prefKana);
@@ -272,18 +277,33 @@ export function convertTo(address, locale) {
 
 /**
  * 全9ロケール（＋KR/TW補助）の住所文字列を一括生成する。
+ * bldg がある場合は DeepL で各言語に翻訳する（並行実行）。
+ * DEEPL_API_KEY 未設定またはエラー時はローマ字フォールバックを使用する。
  *
  * @param {AddressInput} address
- * @returns {object} ConversionResult
+ * @returns {Promise<object>} ConversionResult
  */
-export function convertAll(address) {
+export async function convertAll(address) {
   const base = parseAddress(address);
-  const { pref } = address;
-  const city = address.city;
+  const { pref, city, bldg } = address;
+
+  // ユニーク言語ごとに1リクエスト、Promise.all で並行実行
+  const translations = {};
+  if (bldg) {
+    const uniqueLangs = [...new Set(Object.values(DeepL.LOCALE_TO_LANG))];
+    await Promise.all(
+      uniqueLangs.map(async (lang) => {
+        const result = await DeepL.translate(bldg, lang);
+        if (result) translations[lang] = result;
+      })
+    );
+  }
 
   const fmt = (locale) => {
     const localNames = getLocalNames(pref, city, locale);
-    return getFormat(locale)({ ...base, ...localNames });
+    const lang       = DeepL.LOCALE_TO_LANG[locale];
+    const bldgRoman  = (lang && translations[lang]) || base.bldgRoman;
+    return getFormat(locale)({ ...base, bldgRoman, ...localNames });
   };
 
   return {
