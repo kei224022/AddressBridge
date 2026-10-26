@@ -7,6 +7,7 @@
  */
 
 import { DEEPL_API_KEY } from './config.js';
+import { CONVERSION_LOCALES } from './locales.js';
 
 const DEEPL_URL = 'https://api-free.deepl.com/v2/translate';
 
@@ -15,19 +16,9 @@ const DEEPL_URL = 'https://api-free.deepl.com/v2/translate';
  * ca-en は EN-US、ca-fr は FR として扱う。
  * kr-aux / tw-aux は kr / tw と同言語。
  */
-const LOCALE_TO_LANG = {
-  'us':     'EN-US',
-  'uk':     'EN-GB',
-  'fr':     'FR',
-  'de':     'DE',
-  'it':     'IT',
-  'ca-en':  'EN-US',
-  'ca-fr':  'FR',
-  'kr':     'KO',
-  'tw':     'ZH-HANT',
-  'kr-aux': 'KO',
-  'tw-aux': 'ZH-HANT',
-};
+const LOCALE_TO_LANG = Object.fromEntries(
+  CONVERSION_LOCALES.map(({ locale, language }) => [locale, language])
+);
 
 /**
  * テキストを指定言語に翻訳する。
