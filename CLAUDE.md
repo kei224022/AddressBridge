@@ -545,6 +545,10 @@ firebase serve
 npm run lint && firebase deploy --only hosting
 ```
 
+初回起動前に `js/config.example.js` を `js/config.js` にコピーし、
+Google Maps API キーを設定する。`index.html` の Maps 読み込みキーと揃える。
+DeepL API キーは任意（空の場合はローマ字表記にフォールバック）。
+
 **独自ドメイン設定手順**（お名前.com + Firebase）:
 1. Firebase Console > Hosting > カスタムドメインを追加
 2. 表示された TXT レコードをお名前.com の DNS に登録して所有権確認

@@ -70,7 +70,13 @@ let storedKana     = { prefKana: '', cityKana: '', townKana: '' };
 
 // ─── 初期化 ──────────────────────────────────────────────────────────────────
 
-MapController.init('map-container');
+// Google Maps API が async で先に読み込まれた場合と、モジュールが先に実行された場合の
+// 両方に対応するため _mapsApiReady フラグで判定する
+if (window._mapsApiReady) {
+  MapController.init('map-container');
+} else {
+  window.initMap = () => MapController.init('map-container');
+}
 
 // ─── イベント登録 ─────────────────────────────────────────────────────────────
 
@@ -98,7 +104,7 @@ document.querySelectorAll('.preview-tab').forEach(btn => {
 });
 
 // コピーボタン
-['copy-envelope', 'copy-postcard', 'copy-label'].forEach(id => {
+['copy-result', 'copy-envelope', 'copy-postcard', 'copy-label'].forEach(id => {
   document.getElementById(id)?.addEventListener('click', () => onCopy(id));
 });
 
@@ -197,7 +203,7 @@ async function onConvert() {
     if (validation === 'mismatch') warningEl.style.display = '';
 
     // 変換（全ロケール一括）
-    convResult = convertAll(addressInput);
+    convResult = await convertAll(addressInput);
 
     // ジオコーディング
     const pos = await Geocoder.search(addressInput);
@@ -319,7 +325,7 @@ function onPreviewChange(type) {
 function onCopy(btnId) {
   const text = getResultText(currentLocale);
   const btn  = document.getElementById(btnId);
-  const orig = '📋 宛先住所をコピー';
+  const orig = btnId === 'copy-result' ? '📋 コピー' : '📋 宛先住所をコピー';
 
   const writeText = async () => {
     try {

@@ -10,7 +10,7 @@ export default [
       sourceType: 'module',
       globals: {
         ...globals.browser,
-        L: 'readonly', // Leaflet.js (CDN経由)
+        google: 'readonly', // Google Maps JavaScript API (CDN経由)
       },
     },
     rules: {

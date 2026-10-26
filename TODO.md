@@ -224,35 +224,35 @@ export const DEEPL_API_KEY = '';  // Y-2 で設定
 
 ### Y-2. `js/geocoder.js` を Google Maps Geocoding API に差し替える
 
-- [ ] `import` 文を更新し `GOOGLE_MAPS_API_KEY` を `config.js` から取得する
-- [ ] エンドポイントを `https://maps.googleapis.com/maps/api/geocode/json?address=...&key=...&language=ja&region=JP` に変更する
-- [ ] レスポンスから `results[0].geometry.location.lat` / `.lng` を取得する
-- [ ] ネットワーク障害・0件レスポンス時は `null` を返す（既存のエラーハンドリングを維持）
-- [ ] `npm run lint` でエラーがないことを確認する
+- [x] `import` 文を更新し `GOOGLE_MAPS_API_KEY` を `config.js` から取得する
+- [x] エンドポイントを `https://maps.googleapis.com/maps/api/geocode/json?address=...&key=...&language=ja&region=JP` に変更する
+- [x] レスポンスから `results[0].geometry.location.lat` / `.lng` を取得する
+- [x] ネットワーク障害・0件レスポンス時は `null` を返す（既存のエラーハンドリングを維持）
+- [x] `npm run lint` でエラーがないことを確認する
 
 ### Y-3. `js/map.js` を Google Maps JavaScript API に移行する
 
-- [ ] Leaflet 依存コードをすべて削除する
-- [ ] `MapController.init(elementId)` を `google.maps.Map` の初期化に書き換える
+- [x] Leaflet 依存コードをすべて削除する
+- [x] `MapController.init(elementId)` を `google.maps.Map` の初期化に書き換える
   - `center: { lat: 36.2, lng: 138.2 }`, `zoom: 5` で初期表示
-- [ ] `MapController.show(lat, lon, label)` を `google.maps.Marker` + `google.maps.InfoWindow` に書き換える
+- [x] `MapController.show(lat, lon, label)` を `google.maps.Marker` + `google.maps.InfoWindow` に書き換える
   - `map.setCenter({ lat, lng: lon })`, `map.setZoom(15)`
-- [ ] `MapController.hide()` / `MapController.showError()` を維持する
-- [ ] `npm run lint` でエラーがないことを確認する
+- [x] `MapController.hide()` / `MapController.showError()` を維持する
+- [x] `npm run lint` でエラーがないことを確認する
 
 ### Y-4. `index.html` を更新する
 
-- [ ] `<head>` から Leaflet CSS の `<link>` を削除する
-- [ ] `</body>` 直前の Leaflet JS `<script>` を削除する
-- [ ] Google Maps JS API の `<script async src="...?key=...&callback=initMap">` を追加する
+- [x] `<head>` から Leaflet CSS の `<link>` を削除する
+- [x] `</body>` 直前の Leaflet JS `<script>` を削除する
+- [x] Google Maps JS API の `<script async src="...?key=...&callback=initMap">` を追加する
   - `callback=initMap` を指定し、`window.initMap` で `MapController.init()` を呼び出す
-- [ ] `map-container` div はそのまま維持する
+- [x] `map-container` div はそのまま維持する
 
 ### Y-5. ローカル動作確認
 
-- [ ] `firebase serve` で起動し、実在する住所を入力して変換する
-- [ ] Google Maps に正しい位置（番地レベル）でマーカーが表示されることを確認する
-- [ ] ヘッダーが地図より前面に表示されることを確認する（X-3 の修正効果）
+- [x] `firebase serve` で起動し、実在する住所を入力して変換する
+- [x] Google Maps に正しい位置（番地レベル）でマーカーが表示されることを確認する
+- [x] ヘッダーが地図より前面に表示されることを確認する（X-3 の修正効果）
 
 ---
 
@@ -263,21 +263,21 @@ export const DEEPL_API_KEY = '';  // Y-2 で設定
 
 ### Z-1. `js/translator.js` を新規作成する
 
-- [ ] `DeepL.translate(text, targetLang)` を実装する
+- [x] `DeepL.translate(text, targetLang)` を実装する
   - エンドポイント: `https://api-free.deepl.com/v2/translate`
   - `DEEPL_API_KEY` が空の場合は即座に `null` を返す（フォールバック）
   - ネットワーク障害・API エラー時は `null` を返す
-- [ ] `DeepL.LOCALE_TO_LANG` マッピングを定義する（`us → EN-US`, `kr → KO` など）
-- [ ] `npm run lint` でエラーがないことを確認する
+- [x] `DeepL.LOCALE_TO_LANG` マッピングを定義する（`us → EN-US`, `kr → KO` など）
+- [x] `npm run lint` でエラーがないことを確認する
 
 ### Z-2. `js/converter.js` に翻訳を組み込む
 
-- [ ] `convertAll(address)` を非同期関数（`async`）に変更する
-- [ ] `bldg`（建物名）がある場合のみ DeepL で翻訳し、各ロケールの `bldgRoman` を上書きする
+- [x] `convertAll(address)` を非同期関数（`async`）に変更する
+- [x] `bldg`（建物名）がある場合のみ DeepL で翻訳し、各ロケールの `bldgRoman` を上書きする
   - `bldg` が空 or `DEEPL_API_KEY` 未設定の場合は既存の `convertBldg()` を使用する
-- [ ] `main.js` の `onConvert()` で `await convertAll(...)` に変更する
-- [ ] TC-F-001〜TC-F-010 を再実行してすべて PASS を確認する
-- [ ] `npm run lint` でエラーがないことを確認する
+- [x] `main.js` の `onConvert()` で `await convertAll(...)` に変更する
+- [x] TC-F-001〜TC-F-010 を再実行してすべて PASS を確認する
+- [x] `npm run lint` でエラーがないことを確認する
 
 ---
 
@@ -289,7 +289,7 @@ export const DEEPL_API_KEY = '';  // Y-2 で設定
 
 - [ ] [Google AdSense](https://www.google.com/adsense/) でアカウントを作成する
 - [ ] サイト URL に独自ドメインを登録する
-- [ ] AdSense が発行する確認用 `<script>` タグを `<head>` に追加してデプロイする
+- [x] AdSense が発行する確認用 `<script>` タグを `<head>` に追加してデプロイする
 - [ ] AdSense 管理画面で「審査中」→「承認済み」になるまで待つ（数日〜数週間）
 
 ### W-2. 広告ユニット配置（承認後）
@@ -297,8 +297,8 @@ export const DEEPL_API_KEY = '';  // Y-2 で設定
 - [ ] AdSense 管理画面で「広告ユニット」→「ディスプレイ広告」を2ユニット作成する
   - 広告エリア A（フォームセクション下）用
   - 広告エリア B（変換結果セクション下）用
-- [ ] `index.html` に広告エリア A・B の `<ins class="adsbygoogle">` を追加する（CLAUDE.md §14 参照）
-- [ ] `css/style.css` に `.ad-unit` スタイルを追加する
+- [x] `index.html` に広告エリア A・B の `<ins class="adsbygoogle">` を追加する（CLAUDE.md §14 参照）
+- [x] `css/style.css` に `.ad-unit` スタイルを追加する
 - [ ] `firebase deploy --only hosting` でデプロイし表示を確認する
 
 ---
@@ -518,44 +518,44 @@ export const DEEPL_API_KEY = '';  // Y-2 で設定
 - [x] TC-B-001〜002: `Romanize.convertBanchi()` の全10ケース PASS（Node.js）
 - [x] TC-F-001〜009: `Converter.convertTo()` で9言語の住所フォーマットが仕様通りの行構成になることを確認する
 - [x] TC-F-010: 建物名なしで変換した際に建物名行が出力されないことを確認する
-- [ ] TC-Z-001〜003: `ZipCloud.lookup()` / `ZipCloud.validate()` をブラウザで確認する（TC-Z-001はNode.jsで確認済み）
+- [x] TC-Z-001〜003: `ZipCloud.lookup()` / `ZipCloud.validate()` をブラウザで確認する（TC-Z-001はNode.jsで確認済み）
 - [x] TC-V-002: `ZipCloud.normalizeZip()` の8ケース PASS（Node.js）
 
 ### 4-2. 機能テスト（ブラウザ手動）
 
-- [ ] TC-A-001〜003: 住所補完フローを確認する（ハイフン自動挿入・補完成功・補完失敗）
-- [ ] TC-V-001〜003: フォームバリデーションを確認する（必須未入力・エラークリア）
-- [ ] TC-C-001〜004: 変換フロー E2E を確認する（標準変換・警告表示・建物名なし・連続変換）
-- [ ] TC-P-001〜004: プレビュー切り替えとコピー機能を確認する
-- [ ] TC-M-001〜002: 地図表示とジオコーディング失敗時の動作を確認する
-- [ ] TC-T-001〜002: 全9タブの表示内容を確認する（国名表記・郵便番号・行構成）
+- [x] TC-A-001〜003: 住所補完フローを確認する（ハイフン自動挿入・補完成功・補完失敗）
+- [x] TC-V-001〜003: フォームバリデーションを確認する（必須未入力・エラークリア）
+- [x] TC-C-001〜004: 変換フロー E2E を確認する（標準変換・警告表示・建物名なし・連続変換）
+- [x] TC-P-001〜004: プレビュー切り替えとコピー機能を確認する
+- [x] TC-M-001〜002: 地図表示とジオコーディング失敗時の動作を確認する
+- [x] TC-T-001〜002: 全9タブの表示内容を確認する（国名表記・郵便番号・行構成）
 
 ### 4-3. エッジケーステスト
 
-- [ ] TC-E-001: 特殊な住所入力（番地なし・長い建物名・記号・英数字混在・郡部）を確認する
+- [x] TC-E-001: 特殊な住所入力（番地なし・長い建物名・記号・英数字混在・郡部）を確認する
 - [ ] TC-E-002: API 障害時の動作を確認する（ネットワーク切断でコンソールタブから確認）
 - [ ] TC-E-003: クリップボード API の動作を確認する
-- [ ] TC-E-004: 変換ボタン連打・補完中の変換ボタン押下を確認する
+- [x] TC-E-004: 変換ボタン連打・補完中の変換ボタン押下を確認する
 
 ### 4-4. 非機能テスト
 
-- [ ] TC-N-001: Chrome DevTools でモバイルエミュレーション（375px）のレイアウトを確認する
+- [x] TC-N-001: Chrome DevTools でモバイルエミュレーション（375px）のレイアウトを確認する
 - [ ] TC-N-002: Firefox・Safari（Mac）でも全機能が動作することを確認する
-- [ ] TC-N-004: キーボード操作（Tab移動）とコントラスト比を確認する
-- [ ] TC-N-005: Network タブで自サーバーへの住所送信がないことを確認する（zipcloud / Nominatim のみ）
-- [ ] `npm run lint` が全ファイルでエラー 0 であることを確認する
+- [x] TC-N-004: キーボード操作（Tab移動）とコントラスト比を確認する
+- [x] TC-N-005: Network タブで自サーバーへの住所送信がないことを確認する（zipcloud / Nominatim のみ）
+- [x] `npm run lint` が全ファイルでエラー 0 であることを確認する
 
 ---
 
 ## フェーズ 5 — デプロイ準備・リリース
 
-- [ ] favicon を作成し `<head>` に設定する（封筒アイコン or ✈ を使用）
-- [ ] OGP 画像を作成し `assets/` に配置する
-- [ ] `firebase.json` の `ignore` リストに `TODO.md`, `TEST_SPEC.md`, `API_SPEC.md`, `SCREEN_SPEC.md` を追加してドキュメントが公開されないようにする
-- [ ] `npm run lint` が通ることを最終確認する
-- [ ] `firebase serve` でローカルプレビューを確認する
-- [ ] `firebase deploy --only hosting` でステージング確認用 URL（`*.web.app`）に初回デプロイする
-- [ ] ステージング URL で全機能を再確認する
+- [x] favicon を作成し `<head>` に設定する（封筒アイコン or ✈ を使用）
+- [x] OGP 画像を作成し `assets/` に配置する
+- [x] `firebase.json` の `ignore` リストに `TODO.md`, `TEST_SPEC.md`, `API_SPEC.md`, `SCREEN_SPEC.md` を追加してドキュメントが公開されないようにする
+- [x] `npm run lint` が通ることを最終確認する
+- [x] `firebase serve` でローカルプレビューを確認する
+- [x] `firebase deploy --only hosting` でステージング確認用 URL（`*.web.app`）に初回デプロイする
+- [x] ステージング URL で全機能を再確認する
 - [ ] お名前.com で独自ドメインを取得する
 - [ ] 「Firebase リファレンス > カスタムドメイン設定手順」の Step 1〜4 に従って設定する
 - [ ] Firebase Console のステータスが「接続済み」になることを確認する（最大 48 時間）

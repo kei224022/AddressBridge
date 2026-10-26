@@ -1,22 +1,23 @@
 /**
  * map.js
- * Leaflet地図操作モジュール
+ * Google Maps JavaScript API 地図操作モジュール
  */
 
-let map    = null;
-let marker = null;
+let map        = null;
+let marker     = null;
+let infoWindow = null;
 
 /**
- * 地図を初期化する。
+ * 地図を初期化する。Google Maps JS API の callback=initMap から呼ばれる。
  *
  * @param {string} elementId - 地図を描画する DOM 要素の ID
  */
 function init(elementId) {
-  map = L.map(elementId).setView([36.2, 138.2], 5);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom:     19,
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-  }).addTo(map);
+  map = new google.maps.Map(document.getElementById(elementId), {
+    center: { lat: 36.2, lng: 138.2 },
+    zoom: 5,
+  });
+  infoWindow = new google.maps.InfoWindow();
 }
 
 /**
@@ -24,25 +25,35 @@ function init(elementId) {
  *
  * @param {number} lat
  * @param {number} lon
- * @param {string} label - ポップアップに表示するテキスト
+ * @param {string} label - InfoWindow に表示するテキスト
  */
 function show(lat, lon, label) {
+  if (!map) {
+    showError();
+    return;
+  }
+
   const section = document.getElementById('map-section');
   if (section) section.style.display = '';
 
   const errEl = document.getElementById('map-error');
   if (errEl) errEl.style.display = 'none';
 
+  const position = { lat, lng: lon };
+
   if (marker) {
-    marker.setLatLng([lat, lon]).setPopupContent(label);
+    marker.setPosition(position);
   } else {
-    marker = L.marker([lat, lon]).addTo(map).bindPopup(label);
+    marker = new google.maps.Marker({ position, map });
+    marker.addListener('click', () => infoWindow.open({ anchor: marker, map }));
   }
 
-  map.setView([lat, lon], 15);
-  marker.openPopup();
-  // display:none から表示に切り替わった直後にサイズを再計算させる
-  setTimeout(() => map.invalidateSize(), 0);
+  const content = document.createElement('div');
+  content.textContent = label;
+  infoWindow.setContent(content);
+  map.setCenter(position);
+  map.setZoom(15);
+  infoWindow.open({ anchor: marker, map });
 }
 
 /**
@@ -62,8 +73,6 @@ function showError() {
 
   const errEl = document.getElementById('map-error');
   if (errEl) errEl.style.display = '';
-
-  if (map) setTimeout(() => map.invalidateSize(), 0);
 }
 
 export const MapController = { init, show, hide, showError };

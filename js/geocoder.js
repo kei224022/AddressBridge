@@ -1,13 +1,14 @@
 /**
  * geocoder.js
- * Nominatim API連携（住所→緯度経度）
+ * Google Maps Geocoding API連携（住所→緯度経度）
  */
 
-const NOMINATIM_URL = 'https://nominatim.openstreetmap.org/search';
-const USER_AGENT    = 'AddressBridge/1.0 (ishikawa224022@gmail.com)';
+import { GOOGLE_MAPS_API_KEY } from './config.js';
+
+const GEOCODING_URL = 'https://maps.googleapis.com/maps/api/geocode/json';
 
 /**
- * 住所オブジェクトから Nominatim 検索クエリ文字列を生成する。
+ * 住所オブジェクトから検索クエリ文字列を生成する。
  *
  * @param {{pref:string, city:string, town:string}} address
  * @returns {string}
@@ -28,17 +29,13 @@ function buildGeoQuery(address) {
 async function search(address) {
   const q = buildGeoQuery(address);
   try {
-    const url = `${NOMINATIM_URL}?q=${encodeURIComponent(q)}&format=json&limit=1&countrycodes=jp`;
-    const res = await fetch(url, {
-      headers: {
-        'User-Agent':      USER_AGENT,
-        'Accept-Language': 'ja',
-      },
-    });
+    const url = `${GEOCODING_URL}?address=${encodeURIComponent(q)}&key=${GOOGLE_MAPS_API_KEY}&language=ja&region=JP`;
+    const res = await fetch(url);
     if (!res.ok) return null;
     const data = await res.json();
-    if (!Array.isArray(data) || data.length === 0) return null;
-    return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
+    if (data.status !== 'OK' || !data.results || data.results.length === 0) return null;
+    const { lat, lng } = data.results[0].geometry.location;
+    return { lat, lon: lng };
   } catch {
     return null;
   }
