@@ -62,13 +62,19 @@ API仕様書
 ├── css/
 │   └── style.css           # メインスタイル（エアメールテーマ）
 ├── js/
-│   ├── main.js             # アプリ初期化・イベント管理
+│   ├── main.js             # アプリ初期化・住所変換フロー
+│   ├── address-form.js     # 入力・郵便番号補完・検証・カナの管理
+│   ├── result-view.js      # 変換結果・言語タブ・プレビュー描画
+│   ├── clipboard.js        # コピー操作・フォールバック
+│   ├── ui.js               # 待機表示・スナックバー
+│   ├── locales.js          # ロケール・結果キー・翻訳先の共通定義
 │   ├── converter.js        # 住所変換メインロジック
 │   ├── formats.js          # 各国フォーマット定義・地名辞書
 │   ├── romanize.js         # ヘボン式ローマ字変換
 │   ├── zipcloud.js         # 郵便番号 API 連携・住所補完・検証
-│   ├── geocoder.js         # Nominatim 連携（住所→緯度経度）
-│   └── map.js              # Leaflet 地図操作
+│   ├── translator.js       # DeepL 建物名翻訳
+│   ├── geocoder.js         # Google Maps 連携（住所→緯度経度）
+│   └── map.js              # Google Maps 地図操作
 └── assets/
     └── icons/              # スタンプ・封筒アイコンなど
 ```

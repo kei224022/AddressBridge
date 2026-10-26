@@ -40,14 +40,14 @@ async function fillViaZip(page, zip, extraTown = '', bldg = '') {
   if (bldg)      await page.fill('#input-bldg', bldg);
 }
 
-/** 変換実行して result-section が表示されるまで待つ */
+/** 初回・連続変換のどちらも変換処理の完了まで待つ */
 async function doConvert(page, timeout = 15000) {
   await page.click('#btn-convert');
   await page.waitForFunction(() => {
     const el = document.getElementById('result-section');
-    return el && el.style.display !== 'none';
-  }, { timeout }).catch(() => {});
-  await page.waitForTimeout(300);
+    const button = document.getElementById('btn-convert');
+    return el && el.style.display !== 'none' && button && !button.disabled;
+  }, null, { timeout });
 }
 
 /** 指定タブのテキストを取得 */

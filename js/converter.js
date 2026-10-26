@@ -18,6 +18,7 @@
 import { convert, convertBanchi, convertBldg } from './romanize.js';
 import { get as getFormat, lookupKr, toTraditional } from './formats.js';
 import { DeepL } from './translator.js';
+import { CONVERSION_LOCALES } from './locales.js';
 
 // ─── 都道府県 接尾語テーブル ─────────────────────────────────────────────────
 
@@ -306,19 +307,9 @@ export async function convertAll(address) {
     return getFormat(locale)({ ...base, bldgRoman, ...localNames });
   };
 
-  return {
-    us:    fmt('us'),
-    uk:    fmt('uk'),
-    fr:    fmt('fr'),
-    de:    fmt('de'),
-    it:    fmt('it'),
-    caEn:  fmt('ca-en'),
-    caFr:  fmt('ca-fr'),
-    kr:    fmt('kr'),
-    tw:    fmt('tw'),
-    krAux: fmt('kr-aux'),
-    twAux: fmt('tw-aux'),
-  };
+  return Object.fromEntries(
+    CONVERSION_LOCALES.map(({ locale, resultKey }) => [resultKey, fmt(locale)])
+  );
 }
 
 export default { parseAddress, convertTo, convertAll };
