@@ -11,6 +11,7 @@
     "test:r2:browser": "node tests/r2-browser.mjs",
     "test:r3": "node --test tests/http.test.mjs tests/zipcloud.test.mjs tests/address-form.test.mjs",
     "test:r3:browser": "node tests/r3-browser.mjs",
+    "test:r4:browser": "node tests/r4-browser.mjs",
     "lint": "eslint js/",
     "lint:fix": "eslint js/ --fix"
   },

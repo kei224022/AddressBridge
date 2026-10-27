@@ -22,7 +22,30 @@
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;600;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
 
   <!-- Main CSS -->
-  <link rel="stylesheet" href="css/style.css?v=2" />
+  <link rel="stylesheet" href="css/style.css?v=r4" />
+
+  <!-- 旧版の長期キャッシュから移行する。依存モジュールも設定ファイルも URL を切り替える。 -->
+  <script type="importmap">
+  {
+    "imports": {
+      "./js/main.js": "./js/main.js?v=r4",
+      "./js/address-form.js": "./js/address-form.js?v=r4",
+      "./js/result-view.js": "./js/result-view.js?v=r4",
+      "./js/clipboard.js": "./js/clipboard.js?v=r4",
+      "./js/ui.js": "./js/ui.js?v=r4",
+      "./js/locales.js": "./js/locales.js?v=r4",
+      "./js/converter.js": "./js/converter.js?v=r4",
+      "./js/formats.js": "./js/formats.js?v=r4",
+      "./js/romanize.js": "./js/romanize.js?v=r4",
+      "./js/zipcloud.js": "./js/zipcloud.js?v=r4",
+      "./js/geocoder.js": "./js/geocoder.js?v=r4",
+      "./js/map.js": "./js/map.js?v=r4",
+      "./js/translator.js": "./js/translator.js?v=r4",
+      "./js/http.js": "./js/http.js?v=r4",
+      "./js/config.js": "./js/config.js?v=r4"
+    }
+  }
+  </script>
 
   <!-- Google AdSense: 承認・Publisher ID 取得後に下記を解除すること -->
   <!-- <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXXXXXX"
@@ -318,7 +341,7 @@
   <!-- initMap スタブ: Google Maps async が先に読み込まれても安全に受け取る -->
   <script>window.initMap = function() { window._mapsApiReady = true; };</script>
   <!-- App JS (ES Module) -->
-  <script type="module" src="js/main.js"></script>
+  <script type="module" src="js/main.js?v=r4"></script>
   <!-- Google Maps JavaScript API -->
   <script async src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCoQUjo7T6_Kk8O45iMkFc9ioQ2C8cT-zE&callback=initMap"></script>
 
