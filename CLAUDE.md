@@ -511,12 +511,9 @@ const { translations } = await resp.json();
     ],
     "headers": [
       {
-        "source": "**/*.@(js|css)",
-        "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000" }]
-      },
-      {
         "source": "**",
         "headers": [
+          { "key": "Cache-Control", "value": "no-cache" },
           { "key": "X-Content-Type-Options", "value": "nosniff" },
           { "key": "X-Frame-Options", "value": "DENY" },
           { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" }
@@ -530,6 +527,26 @@ const { translations } = await resp.json();
 ---
 
 ## 11. 開発・デプロイ手順
+
+### キャッシュと更新の方針（R-4）
+
+- `firebase.json` の全公開ファイルに `Cache-Control: no-cache` を設定する。HTML、JS の依存先、`js/config.js`、CSS、画像は再利用前に更新を確認し、未変更なら条件付きリクエストを利用できる。
+- 固定 URL の長期キャッシュは廃止する。内容ハッシュ付きファイル名やビルド工程は導入しない。
+- 旧版で保存済みの JS・CSS はヘッダー変更だけでは直ちに失効しないため、`index.html` の CSS と起動 JS を `?v=r4` に変更し、import map で依存モジュールと設定ファイルにも同じクエリーを付ける。
+- 起動 JS の `<script src>` 自体にもクエリーが必要。import map は JS 内の import 先を解決するために使う。
+- 今後モジュールを追加するときは import map に追加する。新しい HTML と一緒に関連ファイルをまとめて配信し、旧キャッシュからの移行用クエリーを不用意に削除しない。
+- R-4 移行後の通常の更新は `no-cache` による再検証で反映するため、更新のたびに `v=r4` を変更する必要はない。
+
+ローカル検証には Firebase CLI を用意し、`npm run test:r4:browser` を実行する。
+CLI が PATH にない場合は `FIREBASE_BIN=/absolute/path/to/firebase npm run test:r4:browser` とする。
+このテストは Hosting エミュレーターを自動起動・停止し、一時ディレクトリのダミー設定だけで旧版・新版・次版の通常再読み込みを検証する。本番にはデプロイしない。
+
+公開時は `firebase.json` と `index.html`、すべての JS・CSS を同じリリースに含める。
+公開後に `/`、`/index.html`、`/css/style.css?v=r4`、`/js/main.js?v=r4`、依存モジュール、`/js/config.js?v=r4` の `Cache-Control: no-cache` を確認し、以前アクセスしたブラウザで通常再読み込みして動作を確認する。設定ファイルの値は検証ログに出さない。
+
+参考: [Firebase のキャッシュ管理](https://firebase.google.com/docs/hosting/manage-cache)、[Hosting のヘッダー設定](https://firebase.google.com/docs/hosting/full-config#headers)、[HTML Standard: import maps](https://html.spec.whatwg.org/multipage/webappapis.html#import-maps)。
+
+### 起動・デプロイ
 
 ```bash
 # 依存パッケージインストール（ESLint など devDependencies）

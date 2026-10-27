@@ -400,6 +400,31 @@ npm run test:r3:browser
 
 ---
 
+### TC-CACHE-R4: 旧キャッシュからの移行と更新
+
+```bash
+npm run test:r4:browser
+# Firebase CLI が PATH にない場合:
+# FIREBASE_BIN=/absolute/path/to/firebase npm run test:r4:browser
+```
+
+Firebase CLI と Playwright の Chromium が必要。テストがローカル Hosting エミュレーターを自動起動・停止するため、別途サーバーを起動する必要はない。
+一時ディレクトリに公開ファイルを複製し、個人用 `js/config.js` はコピーせずダミー値に置き換える。
+実 API を使わず、Firebase の配信ヘッダーと実ブラウザのキャッシュ動作を検証する。
+キャッシュを無効化する Playwright の route や強制再読み込みは使わず、同じブラウザコンテキストを維持する。
+
+| 検証 | 期待動作 |
+|------|----------|
+| 旧版: JS・CSS を 1 年キャッシュし、サーバー側だけ内容変更 | 次のページ閲覧でも旧 JS・全依存モジュール・設定・CSS がキャッシュから利用される |
+| 新版: 実プロジェクトの `firebase.json` のヘッダーを適用 | `/`、HTML、CSS、全 15 モジュール（設定を含む）に `no-cache` と既存のセキュリティヘッダーが付く |
+| 旧版を閲覧済みのページを通常再読み込み | CSS、起動 JS、全依存モジュール、設定がすべて R-4 版へ切り替わる |
+| 次版: URL を変えず内容だけ変更し、再度通常再読み込み | HTML・CSS・JS・設定の更新が反映され、旧版と混在しない |
+
+`tests/r4-browser.mjs` は全モジュールと CSS にテスト用の版識別値を付け、依存ファイルだけが古い場合も失敗させる。
+本番公開後の CDN・ヘッダー確認は別途デプロイ手順で実施する。
+
+---
+
 ## 8. IT — Nominatim API 連携
 
 対象: `geocoder.js` > `Geocoder.search()`
