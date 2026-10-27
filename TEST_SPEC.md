@@ -423,6 +423,9 @@ Firebase CLI と Playwright の Chromium が必要。テストがローカル Ho
 `tests/r4-browser.mjs` は全モジュールと CSS にテスト用の版識別値を付け、依存ファイルだけが古い場合も失敗させる。
 本番公開後の CDN・ヘッダー確認は別途デプロイ手順で実施する。
 
+公開前には `npm run test:hosting-files` も実行する（同じ `FIREBASE_BIN` オプションに対応）。
+インストール済み Firebase CLI の実際のファイル列挙処理を使い、公開対象が HTML・CSS・JS・favicon・OGP のみで、Git 管理ファイル・隠しディレクトリの中身・メモ・ログ・テストが含まれないことを検証する。
+
 ---
 
 ## 8. IT — Nominatim API 連携
