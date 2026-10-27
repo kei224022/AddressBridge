@@ -5,6 +5,12 @@
   "description": "日本語住所を英語・多言語フォーマットに変換するWebアプリ",
   "type": "module",
   "scripts": {
+    "test:r1": "node --test tests/zipcloud.test.mjs",
+    "test:r1:browser": "node tests/r1-browser.mjs",
+    "test:r2": "node --test tests/address-form.test.mjs",
+    "test:r2:browser": "node tests/r2-browser.mjs",
+    "test:r3": "node --test tests/http.test.mjs tests/zipcloud.test.mjs tests/address-form.test.mjs",
+    "test:r3:browser": "node tests/r3-browser.mjs",
     "lint": "eslint js/",
     "lint:fix": "eslint js/ --fix"
   },

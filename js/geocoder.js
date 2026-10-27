@@ -4,6 +4,7 @@
  */
 
 import { GOOGLE_MAPS_API_KEY } from './config.js';
+import { fetchJson, API_TIMEOUT_MS } from './http.js';
 
 const GEOCODING_URL = 'https://maps.googleapis.com/maps/api/geocode/json';
 
@@ -30,9 +31,7 @@ async function search(address) {
   const q = buildGeoQuery(address);
   try {
     const url = `${GEOCODING_URL}?address=${encodeURIComponent(q)}&key=${GOOGLE_MAPS_API_KEY}&language=ja&region=JP`;
-    const res = await fetch(url);
-    if (!res.ok) return null;
-    const data = await res.json();
+    const data = await fetchJson(url, { timeoutMs: API_TIMEOUT_MS.geocoding });
     if (data.status !== 'OK' || !data.results || data.results.length === 0) return null;
     const { lat, lng } = data.results[0].geometry.location;
     return { lat, lon: lng };

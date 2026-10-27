@@ -3,6 +3,8 @@
  * 郵便番号API連携・住所補完・住所検証
  */
 
+import { fetchJson, API_TIMEOUT_MS } from './http.js';
+
 const ZIPCLOUD_URL = 'https://zipcloud.ibsnet.co.jp/api/search';
 
 /**
@@ -20,34 +22,48 @@ function normalizeZip(input) {
 }
 
 /**
- * 郵便番号から住所情報を取得する。
- * ネットワーク障害時・API エラー時は null を返す（例外をスローしない）。
+ * 郵便番号を検索し、該当なしと通信/API エラーを区別する。
  *
  * @param {string} zipcode - 7桁数字（ハイフンあり/なし両対応）
- * @returns {Promise<ZipResult|null>}
+ * @returns {Promise<{status: 'success', address: object}|{status: 'not-found'|'error'}>}
  */
-async function lookup(zipcode) {
+async function lookupDetailed(zipcode) {
   const zip = normalizeZip(zipcode);
-  if (!zip) return null;
+  if (!zip) return { status: 'not-found' };
   try {
-    const res = await fetch(`${ZIPCLOUD_URL}?zipcode=${zip}`);
-    if (!res.ok) return null;
-    const data = await res.json();
-    if (!data.results || !data.results[0]) return null;
+    const data = await fetchJson(`${ZIPCLOUD_URL}?zipcode=${zip}`, { timeoutMs: API_TIMEOUT_MS.zipcloud });
+    if (!data || data.status !== 200) return { status: 'error' };
+    if (data.results === null || (Array.isArray(data.results) && data.results.length === 0)) {
+      return { status: 'not-found' };
+    }
+    if (!Array.isArray(data.results)) return { status: 'error' };
     const r = data.results[0];
+    if (!r || typeof r.address1 !== 'string' || !r.address1 ||
+        typeof r.address2 !== 'string' || !r.address2 || typeof r.address3 !== 'string') {
+      return { status: 'error' };
+    }
     return {
-      zipcode:  r.zipcode,
-      pref:     r.address1,
-      city:     r.address2,
-      town:     r.address3,
-      prefKana: r.kana1,
-      cityKana: r.kana2,
-      townKana: r.kana3,
-      prefcode: r.prefcode,
+      status: 'success',
+      address: {
+        zipcode:  r.zipcode,
+        pref:     r.address1,
+        city:     r.address2,
+        town:     r.address3,
+        prefKana: r.kana1,
+        cityKana: r.kana2,
+        townKana: r.kana3,
+        prefcode: r.prefcode,
+      },
     };
   } catch {
-    return null;
+    return { status: 'error' };
   }
+}
+
+/** 既存の住所オブジェクト / null を返す API は互換性を維持する。 */
+async function lookup(zipcode) {
+  const result = await lookupDetailed(zipcode);
+  return result.status === 'success' ? result.address : null;
 }
 
 /**
@@ -59,15 +75,11 @@ async function lookup(zipcode) {
  * @returns {Promise<'match'|'mismatch'|'skip'>}
  */
 async function validate(zipcode, pref, city) {
-  try {
-    const result = await lookup(zipcode);
-    if (!result) return 'mismatch';
-    if (result.pref === pref && result.city === city) return 'match';
-    return 'mismatch';
-  } catch {
-    return 'skip';
-  }
+  const result = await lookupDetailed(zipcode);
+  if (result.status === 'error') return 'skip';
+  if (result.status === 'not-found') return 'mismatch';
+  return result.address.pref === pref && result.address.city === city ? 'match' : 'mismatch';
 }
 
-export const ZipCloud = { normalizeZip, lookup, validate };
+export const ZipCloud = { normalizeZip, lookup, lookupDetailed, validate };
 export default ZipCloud;

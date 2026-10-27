@@ -8,6 +8,7 @@
 
 import { DEEPL_API_KEY } from './config.js';
 import { CONVERSION_LOCALES } from './locales.js';
+import { fetchJson, API_TIMEOUT_MS } from './http.js';
 
 const DEEPL_URL = 'https://api-free.deepl.com/v2/translate';
 
@@ -31,7 +32,8 @@ const LOCALE_TO_LANG = Object.fromEntries(
 async function translate(text, targetLang) {
   if (!DEEPL_API_KEY || !text) return null;
   try {
-    const res = await fetch(DEEPL_URL, {
+    const data = await fetchJson(DEEPL_URL, {
+      timeoutMs: API_TIMEOUT_MS.deepl,
       method: 'POST',
       headers: {
         'Authorization': `DeepL-Auth-Key ${DEEPL_API_KEY}`,
@@ -39,8 +41,6 @@ async function translate(text, targetLang) {
       },
       body: JSON.stringify({ text: [text], target_lang: targetLang }),
     });
-    if (!res.ok) return null;
-    const data = await res.json();
     const translated = data.translations?.[0]?.text ?? null;
     // 翻訳結果にひらがな・カタカナが残っている場合はローマ字フォールバックに委ねる
     if (translated && /[぀-ヿ]/.test(translated)) return null;

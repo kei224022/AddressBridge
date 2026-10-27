@@ -264,6 +264,27 @@ const result = await ZipCloud.lookup('1500002');
 // 該当なし・エラー時: null
 ```
 
+#### `ZipCloud.lookupDetailed(zipcode)`
+
+補完・検証で使う詳細検索。引数は `lookup()` と同じで、例外をスローせず次の結果を返す。
+
+| 結果 | 戻り値 | 判定条件 |
+|------|--------|----------|
+| 成功 | `{ status: 'success', address: ZipResult }` | HTTP 成功、API `status: 200`、有効な住所データあり |
+| 該当なし | `{ status: 'not-found' }` | API `status: 200` で `results` が `null` または空配列 |
+| 通信/API エラー | `{ status: 'error' }` | HTTP エラー、ネットワーク障害、不正 JSON、API エラー、不正なレスポンス構造 |
+
+正規化できない入力も `not-found` とし、通信は行わない。
+既存の `lookup()` はこの処理を利用し、従来どおり住所オブジェクトまたは `null` を返す。
+補完では該当なしを「郵便番号が見つかりませんでした」、通信/API エラーを
+「郵便番号の検索に失敗しました。通信状況を確認して再試行してください」と通知する。
+
+補完 UI（`js/address-form.js`）は要求ごとの連番、要求時の郵便番号、住所フィールドの値と編集履歴を保持する。
+応答を反映するのは、最新要求で、現在の郵便番号が一致し、都道府県・市区町村・町名番地・建物名が要求後に編集されていない場合だけとする。
+入力を編集して元に戻した場合も、その要求は無効とする。古い成功応答・該当なし・エラーはすべて無視し、通知やフォーカスも更新しない。
+郵便番号の入力イベントでは削除・桁不足・同じ番号への再入力を含めて旧要求を無効化する。
+番号が変更・削除された時点で取得済みのカナをすべて消し、次の有効な補完成功時に設定し直す。
+
 #### `ZipCloud.validate(zipcode, pref, city)`
 
 郵便番号と入力した都道府県・市区町村の整合性を検証する。
@@ -275,8 +296,8 @@ const result = await ZipCloud.lookup('1500002');
 
 ```javascript
 // 'match'    : API結果と入力が一致
-// 'mismatch' : 不一致（警告表示）
-// 'skip'     : API未応答またはエラー（警告表示しない）
+// 'mismatch' : 正常検索で該当なし、または住所が不一致（警告表示）
+// 'skip'     : 通信/API エラー、不正レスポンス（警告表示せず変換を継続）
 ```
 
 #### `ZipCloud.normalizeZip(input)`
@@ -647,6 +668,32 @@ async function onConvert() {
   setLoading(false);
 }
 ```
+
+---
+
+### 4-8. http.js — 外部 API の待機上限
+
+`fetchJson(url, { timeoutMs, ...options })` は JSON の取得を期限付きで行う。
+`timeoutMs` を除くオプションは `fetch()` へ渡し、中断用の `AbortSignal` はヘルパーが生成する。
+HTTP エラー・通信障害・不正 JSON は例外として呼び出し元に返す。
+
+待機上限は `API_TIMEOUT_MS` に定義し、zipcloud・Google Maps Geocoding・DeepL はそれぞれ **5,000 ms** とする。
+期限は要求開始から `response.json()` が完了するまでで、ヘッダー取得後もタイマーを維持する。
+超過時は `TimeoutError` を返し、`AbortController` で通信を中断する。
+中断に反応しないモックなどでも呼び出し元が待ち続けないよう、期限との `Promise.race()` も行う。
+成功・HTTP エラー・JSON エラー・通信障害・期限超過のすべてでタイマーを解除する。
+
+| API | 期限超過時の動作 |
+|-----|------------------|
+| zipcloud 補完 | `lookupDetailed()` は `error`、`lookup()` は従来どおり `null`。通信失敗の通知を表示する |
+| zipcloud 住所検証 | `validate()` は `skip` を返し、住所不一致の警告を出さず変換を継続する |
+| DeepL | `translate()` は `null` を返し、対象言語の建物名をローマ字表記にする |
+| Google Maps Geocoding | `search()` は `null` を返し、地図エラーを表示して住所・プレビューを表示する |
+
+DeepL の各言語は並行実行するため、言語数分の待機時間を直列には加算しない。
+現在の変換処理は住所検証 → 翻訳 → 地図検索の順で待つため、すべてが期限超過する場合は最大で約 15 秒の通信待機となる（ブラウザの処理・スケジューリング時間を除く）。
+`main.js` の `finally` で変換ボタンの待機表示を解除し、再実行できる状態へ戻す。
+地図より先に結果を表示する変更は R-5 で実施する。
 
 ---
 

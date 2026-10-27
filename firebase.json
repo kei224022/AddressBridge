@@ -17,6 +17,7 @@
       "pw_test.mjs",
       "staging_test.mjs",
       "gen_ogp.mjs",
+      "tests/**",
       "js/config.example.js",
       "ScreenShot/**",
       "**/.*",
