@@ -23,6 +23,7 @@
       "js/config.example.js",
       "ScreenShot/**",
       "**/.*",
+      "**/.*/**",
       "**/node_modules/**"
     ],
     "headers": [

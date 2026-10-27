@@ -507,6 +507,7 @@ const { translations } = await resp.json();
       "CLAUDE.md",
       ".firebaserc",
       "**/.*",
+      "**/.*/**",
       "**/node_modules/**"
     ],
     "headers": [
@@ -542,6 +543,8 @@ CLI が PATH にない場合は `FIREBASE_BIN=/absolute/path/to/firebase npm run
 このテストは Hosting エミュレーターを自動起動・停止し、一時ディレクトリのダミー設定だけで旧版・新版・次版の通常再読み込みを検証する。本番にはデプロイしない。
 
 公開時は `firebase.json` と `index.html`、すべての JS・CSS を同じリリースに含める。
+公開前に `npm run test:hosting-files`（CLI が PATH にない場合は `FIREBASE_BIN` を指定）で、Firebase CLI が実際に選ぶ公開ファイルがアプリ用だけであることを確認する。
+`**/.*` だけでは隠しディレクトリ内のファイルを除外できないため、`**/.*/**` も指定する。
 公開後に `/`、`/index.html`、`/css/style.css?v=r4`、`/js/main.js?v=r4`、依存モジュール、`/js/config.js?v=r4` の `Cache-Control: no-cache` を確認し、以前アクセスしたブラウザで通常再読み込みして動作を確認する。設定ファイルの値は検証ログに出さない。
 
 参考: [Firebase のキャッシュ管理](https://firebase.google.com/docs/hosting/manage-cache)、[Hosting のヘッダー設定](https://firebase.google.com/docs/hosting/full-config#headers)、[HTML Standard: import maps](https://html.spec.whatwg.org/multipage/webappapis.html#import-maps)。
