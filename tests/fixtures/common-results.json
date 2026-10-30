@@ -1,0 +1,92 @@
+{
+  "baselineCommit": "53498c8",
+  "translations": {
+    "EN-US": "Test Building Room 301",
+    "EN-GB": "Test Building Flat 301",
+    "FR": "Bâtiment Test 301",
+    "DE": "Testgebäude 301",
+    "IT": "Edificio Test 301",
+    "KO": "테스트 빌딩 301호",
+    "ZH-HANT": "測試大樓301室"
+  },
+  "cases": [
+    {
+      "name": "building-fallback",
+      "address": {
+        "zip": "1500002",
+        "pref": "東京都",
+        "city": "渋谷区",
+        "town": "渋谷1-2-3",
+        "bldg": "テストビル301号室",
+        "prefKana": "トウキョウト",
+        "cityKana": "シブヤク",
+        "townKana": "シブヤ"
+      },
+      "expected": {
+        "us": "Tesuto Bldg 301号室\n1-2-3 Shibuya, Shibuya-ku\nTokyo 150-0002\nJAPAN",
+        "uk": "Tesuto Bldg 301号室\n1-2-3 Shibuya, Shibuya-ku\nTokyo\n150-0002\nJAPAN",
+        "fr": "Tesuto Bldg 301号室\n1-2-3 Shibuya, Shibuya-ku\n150-0002 Tokyo\nJAPON",
+        "de": "Tesuto Bldg 301号室\nShibuya 1-2-3, Shibuya-ku\n150-0002 Tokyo\nJAPAN",
+        "it": "Tesuto Bldg 301号室\nShibuya 1-2-3, Shibuya-ku\n150-0002 Tokyo\nGIAPPONE",
+        "caEn": "Tesuto Bldg 301号室\n1-2-3 Shibuya, Shibuya-ku\nTokyo 150-0002\nJAPAN",
+        "caFr": "Tesuto Bldg 301号室\n1-2-3 Shibuya, Shibuya-ku\n150-0002 Tokyo\nJAPON",
+        "kr": "일본 〒150-0002\nTokyo-to Shibuya-ku Shibuya 1-2-3\nTesuto Bldg 301号室",
+        "tw": "日本 〒150-0002\n東京都 澀谷區 Shibuya 1-2-3\nTesuto Bldg 301号室",
+        "krAux": "일본 〒150-0002\n도쿄도 시부야구 Shibuya 1-2-3\nTesuto Bldg 301号室",
+        "twAux": "日本 〒150-0002\n東京都 澀谷區 Shibuya 1-2-3\nTesuto Bldg 301号室"
+      }
+    },
+    {
+      "name": "without-building",
+      "address": {
+        "zip": "1500002",
+        "pref": "東京都",
+        "city": "渋谷区",
+        "town": "渋谷1-2-3",
+        "bldg": "",
+        "prefKana": "トウキョウト",
+        "cityKana": "シブヤク",
+        "townKana": "シブヤ"
+      },
+      "expected": {
+        "us": "1-2-3 Shibuya, Shibuya-ku\nTokyo 150-0002\nJAPAN",
+        "uk": "1-2-3 Shibuya, Shibuya-ku\nTokyo\n150-0002\nJAPAN",
+        "fr": "1-2-3 Shibuya, Shibuya-ku\n150-0002 Tokyo\nJAPON",
+        "de": "Shibuya 1-2-3, Shibuya-ku\n150-0002 Tokyo\nJAPAN",
+        "it": "Shibuya 1-2-3, Shibuya-ku\n150-0002 Tokyo\nGIAPPONE",
+        "caEn": "1-2-3 Shibuya, Shibuya-ku\nTokyo 150-0002\nJAPAN",
+        "caFr": "1-2-3 Shibuya, Shibuya-ku\n150-0002 Tokyo\nJAPON",
+        "kr": "일본 〒150-0002\nTokyo-to Shibuya-ku Shibuya 1-2-3",
+        "tw": "日本 〒150-0002\n東京都 澀谷區 Shibuya 1-2-3",
+        "krAux": "일본 〒150-0002\n도쿄도 시부야구 Shibuya 1-2-3",
+        "twAux": "日本 〒150-0002\n東京都 澀谷區 Shibuya 1-2-3"
+      }
+    },
+    {
+      "name": "building-translated",
+      "address": {
+        "zip": "1500002",
+        "pref": "東京都",
+        "city": "渋谷区",
+        "town": "渋谷1-2-3",
+        "bldg": "テストビル301号室",
+        "prefKana": "トウキョウト",
+        "cityKana": "シブヤク",
+        "townKana": "シブヤ"
+      },
+      "expected": {
+        "us": "Test Building Room 301\n1-2-3 Shibuya, Shibuya-ku\nTokyo 150-0002\nJAPAN",
+        "uk": "Test Building Flat 301\n1-2-3 Shibuya, Shibuya-ku\nTokyo\n150-0002\nJAPAN",
+        "fr": "Bâtiment Test 301\n1-2-3 Shibuya, Shibuya-ku\n150-0002 Tokyo\nJAPON",
+        "de": "Testgebäude 301\nShibuya 1-2-3, Shibuya-ku\n150-0002 Tokyo\nJAPAN",
+        "it": "Edificio Test 301\nShibuya 1-2-3, Shibuya-ku\n150-0002 Tokyo\nGIAPPONE",
+        "caEn": "Test Building Room 301\n1-2-3 Shibuya, Shibuya-ku\nTokyo 150-0002\nJAPAN",
+        "caFr": "Bâtiment Test 301\n1-2-3 Shibuya, Shibuya-ku\n150-0002 Tokyo\nJAPON",
+        "kr": "일본 〒150-0002\nTokyo-to Shibuya-ku Shibuya 1-2-3\n테스트 빌딩 301호",
+        "tw": "日本 〒150-0002\n東京都 澀谷區 Shibuya 1-2-3\n測試大樓301室",
+        "krAux": "일본 〒150-0002\n도쿄도 시부야구 Shibuya 1-2-3\n테스트 빌딩 301호",
+        "twAux": "日本 〒150-0002\n東京都 澀谷區 Shibuya 1-2-3\n測試大樓301室"
+      }
+    }
+  ]
+}

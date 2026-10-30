@@ -1,5 +1,5 @@
 /**
- * phase4_test.mjs — AddressBridge フェーズ4 ブラウザ自動テスト
+ * phase4_test.mjs — 実 API を使う手動の接続確認（CI 対象外）
  * Playwright (Chromium headless) で TC-A / V / C / P / M / T / E / N / Z を実施
  */
 import { chromium } from 'playwright';
@@ -40,13 +40,20 @@ async function fillViaZip(page, zip, extraTown = '', bldg = '') {
   if (bldg)      await page.fill('#input-bldg', bldg);
 }
 
-/** 初回・連続変換のどちらも変換処理の完了まで待つ */
+/** 住所変換の完了まで待つ。地図検索の完了は別途 waitForMap() で待つ。 */
 async function doConvert(page, timeout = 15000) {
   await page.click('#btn-convert');
   await page.waitForFunction(() => {
     const el = document.getElementById('result-section');
     const button = document.getElementById('btn-convert');
     return el && el.style.display !== 'none' && button && !button.disabled;
+  }, null, { timeout });
+}
+
+async function waitForMap(page, timeout = 12000) {
+  await page.waitForFunction(() => {
+    const state = document.getElementById('map-section')?.dataset.state;
+    return state === 'ready' || state === 'error';
   }, null, { timeout });
 }
 
@@ -307,10 +314,7 @@ console.log('\n── TC-M: 地図表示 ──');
   // TC-M-001b: 変換後は表示
   await fillViaZip(page, '150-0002', '1丁目2番3号');
   await doConvert(page);
-  await page.waitForFunction(() => {
-    const s = document.getElementById('map-section');
-    return s && s.style.display !== 'none';
-  }, { timeout: 12000 }).catch(() => {});
+  await waitForMap(page);
   const shownAfter = await page.evaluate(() => {
     const s = document.getElementById('map-section');
     return s && s.style.display !== 'none';
@@ -318,8 +322,8 @@ console.log('\n── TC-M: 地図表示 ──');
   log('TC-M-001b', shownAfter, '変換後: 地図セクション表示');
 
   // TC-M-002: 地図コンテナ or エラーメッセージが見える
-  const hasMap = await page.isVisible('#map-container');
-  log('TC-M-002', hasMap, '地図コンテナ存在');
+  const hasMap = await page.isVisible('#map-container') || await page.isVisible('#map-error');
+  log('TC-M-002', hasMap, '地図またはエラー表示');
   await page.close();
 }
 

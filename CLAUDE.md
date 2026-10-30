@@ -96,7 +96,7 @@ API仕様書
 
 **郵便番号入力 → 住所補完フロー**（ボタンなし・自動）:
 1. 郵便番号フィールドへの入力をリアルタイム監視
-2. 3桁目入力後にハイフンを自動挿入（`150` → `150-`）
+2. 4桁目入力時に3桁目の後へハイフンを自動挿入（`1500` → `150-0`）
 3. **7桁（ハイフン除く）が揃った瞬間に自動で** zipcloud API を呼び出す
 4. **都道府県・市区町村・町域名（address3）を自動入力**する
 5. フォーカスを「町名・番地」フィールドへ移動する（ユーザーは番地のみ追記）
@@ -106,6 +106,11 @@ API仕様書
 
 補完は最新の要求だけを反映する。待機中に郵便番号や住所（建物名を含む）を編集した場合は、古い応答による上書き・通知・フォーカス移動を行わない。
 郵便番号の変更・削除時は取得済みカナを無効化する。同じ番号に戻しても、以前の要求は復活しない。
+
+郵便番号の整形と検証は `ZipCloud.formatZipInput()` / `normalizeZip()` に統一する。
+全角数字・全角ハイフンを NFKC 正規化し、空白を除去した上で 7 桁数字または 3 桁-4 桁だけを受け付ける。
+桁超過・文字混在を削って補完することはせず、未入力と形式不正を別のエラーにする。不正な入力では外部 API を呼ばない。
+貼り付けが途中で切り捨てられないよう `maxlength` は使わず、IME の変換中は値を変更せず補完も保留する。
 
 ### 4-2. 住所検証
 
@@ -140,6 +145,9 @@ API仕様書
 - ズームレベル: **15**（丁目・街区レベル）
 - マーカークリックで住所のポップアップ表示
 - フォールバック: 応答なし / 結果なしの場合は「地図を表示できませんでした」を表示
+- 住所・プレビューを描画してから地図を非同期更新する。地図待機中も言語タブ・プレビュー・コピー・次の変換を利用できる
+- 新しい変換の開始時に古い地図を隠して待機表示にし、以前の変換の地図応答は成功・失敗とも無視する
+- 待機・エラー表示は地図本体の外側に配置し、地図 API がコンテナを初期化しても残す。地図枠の高さを保ち、完了時の再スクロールは行わない
 
 > **Nominatim + Leaflet は廃止**。番地レベルの精度問題により Google Maps に移行。
 
@@ -538,8 +546,8 @@ const { translations } = await resp.json();
 - 今後モジュールを追加するときは import map に追加する。新しい HTML と一緒に関連ファイルをまとめて配信し、旧キャッシュからの移行用クエリーを不用意に削除しない。
 - R-4 移行後の通常の更新は `no-cache` による再検証で反映するため、更新のたびに `v=r4` を変更する必要はない。
 
-ローカル検証には Firebase CLI を用意し、`npm run test:r4:browser` を実行する。
-CLI が PATH にない場合は `FIREBASE_BIN=/absolute/path/to/firebase npm run test:r4:browser` とする。
+ローカル検証には `npm ci` と `npx playwright install --with-deps chromium` を実行し、`npm run test:r4:browser` を使う。
+Firebase CLI は開発依存に固定しており、グローバル版は不要。別の CLI を検証するときだけ `FIREBASE_BIN` を指定する。
 このテストは Hosting エミュレーターを自動起動・停止し、一時ディレクトリのダミー設定だけで旧版・新版・次版の通常再読み込みを検証する。本番にはデプロイしない。
 
 公開時は `firebase.json` と `index.html`、すべての JS・CSS を同じリリースに含める。
@@ -552,8 +560,8 @@ CLI が PATH にない場合は `FIREBASE_BIN=/absolute/path/to/firebase npm run
 ### 起動・デプロイ
 
 ```bash
-# 依存パッケージインストール（ESLint など devDependencies）
-npm install
+# ロックファイルに従って開発依存をインストール
+npm ci
 
 # Lint 実行
 npm run lint
@@ -561,25 +569,42 @@ npm run lint
 # Lint 自動修正
 npm run lint:fix
 
-# Firebase CLI インストール（未インストールの場合）
-npm install -g firebase-tools
+# オフライン回帰テスト（実 API キー不要、サーバーは自動管理）
+npx playwright install --with-deps chromium
+npm test
 
 # ログイン
-firebase login
+npx firebase login
 
 # プロジェクト初期化（Hosting のみ選択）
-firebase init hosting
+npx firebase init hosting
 
 # ローカルプレビュー
-firebase serve
+npx firebase serve
 
 # 本番デプロイ（Lint パスを確認してから実行）
-npm run lint && firebase deploy --only hosting
+npm test && npm run test:hosting-files && npx firebase deploy --only hosting
 ```
 
 初回起動前に `js/config.example.js` を `js/config.js` にコピーし、
 Google Maps API キーを設定する。`index.html` の Maps 読み込みキーと揃える。
 DeepL API キーは任意（空の場合はローマ字表記にフォールバック）。
+
+### 自動テストと CI（R-7）
+
+`npm test` は Lint・単体テスト 67 件・ブラウザテスト 81 件（R-1〜R-6 と改修後の共通確認）を順に実行する。
+共通のテストサーバーは個人用設定を読まず、`tests/fixtures/config.js` のダミー値を返す。API と地図スクリプトは固定応答にし、未定義の外部通信は遮断する。
+R-4 はログイン不要の `demo-` プロジェクトと一時ファイルで Hosting の実キャッシュを検証する。
+`npm run test:common:browser` は全 9 言語と韓国・台湾の補助表記を、改修前 `53498c8` の固定出力と比較する。建物名あり・なし・翻訳成功、3 種プレビュー、実クリップボードと旧方式のコピーを検証する。
+固定期待値は `tests/fixtures/common-results.json` に保持し、仕様変更時は差分を確認して更新する。詳細は `TEST_SPEC.md` の「改修後の共通確認」を参照する。
+
+GitHub Actions は push / pull_request で `npm ci`、ブラウザ準備、`npm test`、失敗検知の自己検証を実行する。
+スクリーンショット・トレース・ブラウザログと HTML レポートは失敗時に保存し、Actions の成果物を 7 日間保持する。
+`npm run test:verify-failure` は設定ファイルのない一時コピーでの成功と、コピーだけに入れた郵便番号の不具合による失敗を確認する。通常のテスト結果とは保存先を分ける。
+
+実 API の接続確認は `test:live:local` / `test:live:staging` に分離し、CI には含めない。
+テスト設定・固定データ・成果物は Hosting に公開しない。公開前に `npm run test:hosting-files` で CLI が選ぶファイル一覧を検証する。
+開発用 Firebase CLI 15.34.1 の間接依存には `npm audit` の moderate 指摘が残る（本番の実行依存はなし）。互換性を壊す強制更新は行わず、上流の修正版に追従する。
 
 **独自ドメイン設定手順**（お名前.com + Firebase）:
 1. Firebase Console > Hosting > カスタムドメインを追加

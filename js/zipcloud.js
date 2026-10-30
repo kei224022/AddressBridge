@@ -8,17 +8,28 @@ import { fetchJson, API_TIMEOUT_MS } from './http.js';
 const ZIPCLOUD_URL = 'https://zipcloud.ibsnet.co.jp/api/search';
 
 /**
- * 入力文字列を7桁数字に正規化する（全角・ハイフン・スペースを除去）。
- * 7桁未満の場合は空文字列を返す。
+ * 全角を NFKC 正規化し、空白を除去する。文字や余分な桁は捨てない。
+ */
+function compactZip(input) {
+  return String(input ?? '').normalize('NFKC').replace(/\s/g, '');
+}
+
+/** 入力表示用の整形。数字だけなら4桁目以降の前にハイフンを挿入する。 */
+function formatZipInput(input) {
+  const compact = compactZip(input);
+  return /^[0-9]{4,}$/.test(compact) ? `${compact.slice(0, 3)}-${compact.slice(3)}` : compact;
+}
+
+/**
+ * 7桁数字、または3桁-4桁の表記のみを7桁数字に正規化する。
+ * 桁不足・桁超過・文字混在・不正なハイフンは空文字列を返す。
  *
  * @param {string} input
  * @returns {string}
  */
 function normalizeZip(input) {
-  if (!input) return '';
-  const norm = String(input).normalize('NFKC');
-  const digits = norm.replace(/[^0-9]/g, '');
-  return digits.length >= 7 ? digits.slice(0, 7) : '';
+  const compact = compactZip(input);
+  return /^[0-9]{3}-?[0-9]{4}$/.test(compact) ? compact.replace('-', '') : '';
 }
 
 /**
@@ -81,5 +92,5 @@ async function validate(zipcode, pref, city) {
   return result.address.pref === pref && result.address.city === city ? 'match' : 'mismatch';
 }
 
-export const ZipCloud = { normalizeZip, lookup, lookupDetailed, validate };
+export const ZipCloud = { normalizeZip, formatZipInput, lookup, lookupDetailed, validate };
 export default ZipCloud;

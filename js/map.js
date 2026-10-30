@@ -7,6 +7,26 @@ let map        = null;
 let marker     = null;
 let infoWindow = null;
 
+/** 地図本体を隠しても枠の高さを保ち、古い地図とスクロール位置の変動を防ぐ。 */
+function setState(state) {
+  const section = document.getElementById('map-section');
+  if (section) {
+    section.style.display = state === 'hidden' ? 'none' : '';
+    section.dataset.state = state;
+    section.setAttribute('aria-busy', String(state === 'loading'));
+  }
+  const container = document.getElementById('map-container');
+  if (container) container.style.visibility = state === 'ready' ? 'visible' : 'hidden';
+  const loading = document.getElementById('map-loading');
+  if (loading) loading.style.display = state === 'loading' ? '' : 'none';
+  const error = document.getElementById('map-error');
+  if (error) error.style.display = state === 'error' ? '' : 'none';
+}
+
+function showLoading() {
+  setState('loading');
+}
+
 /**
  * 地図を初期化する。Google Maps JS API の callback=initMap から呼ばれる。
  *
@@ -33,11 +53,7 @@ function show(lat, lon, label) {
     return;
   }
 
-  const section = document.getElementById('map-section');
-  if (section) section.style.display = '';
-
-  const errEl = document.getElementById('map-error');
-  if (errEl) errEl.style.display = 'none';
+  setState('ready');
 
   const position = { lat, lng: lon };
 
@@ -60,20 +76,15 @@ function show(lat, lon, label) {
  * 地図エリアを非表示にする。
  */
 function hide() {
-  const section = document.getElementById('map-section');
-  if (section) section.style.display = 'none';
+  setState('hidden');
 }
 
 /**
  * ジオコーディング失敗時のエラー表示に切り替える。
  */
 function showError() {
-  const section = document.getElementById('map-section');
-  if (section) section.style.display = '';
-
-  const errEl = document.getElementById('map-error');
-  if (errEl) errEl.style.display = '';
+  setState('error');
 }
 
-export const MapController = { init, show, hide, showError };
+export const MapController = { init, show, showLoading, hide, showError };
 export default MapController;

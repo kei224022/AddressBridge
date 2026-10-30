@@ -3,8 +3,7 @@ import test from 'node:test';
 import { createAddressForm } from '../js/address-form.js';
 import { ZipCloud } from '../js/zipcloud.js';
 
-const tokyo = { pref: '東京都', city: '渋谷区', town: '渋谷', prefKana: 'トウキョウト', cityKana: 'シブヤク', townKana: 'シブヤ' };
-const akita = { pref: '秋田県', city: '秋田市', town: '手形山崎町', prefKana: 'アキタケン', cityKana: 'アキタシ', townKana: 'テガタヤマザキチョウ' };
+import { tokyo, akita } from './fixtures/addresses.mjs';
 const emptyKana = { prefKana: '', cityKana: '', townKana: '' };
 const flush = () => new Promise(resolve => setImmediate(resolve));
 
@@ -165,7 +164,7 @@ test('programmatic zip changes are checked before applying a response', async t 
   assert.equal(state.form.read().pref, '');
 });
 
-for (const nextZip of ['0100854', '', '150']) {
+for (const nextZip of ['0100854', '', '150', '15000028', 'abc1500002']) {
   test(`changing a completed lookup's zip to ${JSON.stringify(nextZip)} immediately clears all kana`, async t => {
     const state = setup(t);
     state.input('zip', '1500002');

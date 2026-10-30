@@ -82,12 +82,12 @@
             type="text"
             id="input-zip"
             placeholder="例: 150-0002"
-            maxlength="8"
             inputmode="numeric"
             autocomplete="postal-code"
+            aria-describedby="zip-hint error-zip"
           />
         </div>
-        <div class="field-hint">7桁入力で都道府県・市区町村・町域名を自動補完します</div>
+        <div class="field-hint" id="zip-hint">7桁入力で住所を自動補完します。全角数字・ハイフン・空白にも対応しています</div>
         <div class="field-error" id="error-zip" role="alert"></div>
       </div>
 
@@ -163,10 +163,14 @@
     </div>
 
     <!-- ── 地図セクション（変換後に表示） ── -->
-    <section class="section" id="map-section" style="display:none;">
+    <section class="section" id="map-section" data-state="hidden" aria-busy="false" style="display:none;">
       <h2 class="section-title">📍 地図で確認</h2>
-      <div id="map-container" aria-label="住所の場所を示す地図">
-        <div class="map-error-overlay" id="map-error" style="display:none;">
+      <div class="map-wrapper">
+        <div id="map-container" aria-label="住所の場所を示す地図"></div>
+        <div class="map-error-overlay" id="map-loading" role="status" style="display:none;">
+          地図を検索しています…
+        </div>
+        <div class="map-error-overlay" id="map-error" role="status" style="display:none;">
           地図を表示できませんでした
         </div>
       </div>

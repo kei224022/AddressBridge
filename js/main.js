@@ -12,6 +12,7 @@ const btnConvert = document.getElementById('btn-convert');
 const warningEl = document.getElementById('warning-banner');
 const form = createAddressForm(createSnackbar(document.getElementById('snackbar')));
 const results = createResultView();
+let conversionId = 0;
 
 // async API と ES Module のどちらが先に読み込まれても初期化できるようにする。
 if (window._mapsApiReady) {
@@ -24,18 +25,32 @@ bindCopyButtons(results.getText);
 btnConvert.addEventListener('click', onConvert);
 
 async function onConvert() {
-  if (!form.validate()) return;
+  if (btnConvert.disabled || !form.validate()) return;
 
+  const requestId = ++conversionId;
   setLoading(btnConvert, true, '変換中...');
   warningEl.style.display = 'none';
   const address = form.read();
+  MapController.showLoading();
 
   try {
     const validation = await ZipCloud.validate(address.zip, address.pref, address.city);
     if (validation === 'mismatch') warningEl.style.display = '';
 
     const converted = await convertAll(address);
+    results.render(address, converted);
+    document.getElementById('result-section').scrollIntoView({ behavior: 'smooth' });
+    // 地図の待機中もコピー・タブ操作・次の変換を利用できるようにする。
+    void updateMap(address, requestId);
+  } finally {
+    setLoading(btnConvert, false);
+  }
+}
+
+async function updateMap(address, requestId) {
+  try {
     const position = await Geocoder.search(address);
+    if (requestId !== conversionId) return;
     if (position) {
       const label = [address.pref, address.city, address.town, address.bldg]
         .filter(Boolean).join('');
@@ -43,13 +58,7 @@ async function onConvert() {
     } else {
       MapController.showError();
     }
-
-    results.render(address, converted);
-    const mapSection = document.getElementById('map-section');
-    const scrollTo = mapSection && mapSection.style.display !== 'none'
-      ? mapSection : document.getElementById('result-section');
-    scrollTo.scrollIntoView({ behavior: 'smooth' });
-  } finally {
-    setLoading(btnConvert, false);
+  } catch {
+    if (requestId === conversionId) MapController.showError();
   }
 }
