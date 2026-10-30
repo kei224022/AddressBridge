@@ -259,6 +259,10 @@ body {
 .snackbar.show { opacity: 1; }
 
 /* --- Map --- */
+.map-wrapper {
+  position: relative;
+}
+
 #map-container {
   height: 360px;
   border-radius: 6px;

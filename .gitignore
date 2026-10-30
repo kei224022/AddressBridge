@@ -9,3 +9,7 @@ task.md
 .serena/
 .vscode/
 ScreenShot/
+test-results/
+playwright-report/
+failure-proof-results/
+failure-proof-report/

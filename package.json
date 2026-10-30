@@ -6,19 +6,30 @@
   "type": "module",
   "scripts": {
     "test:r1": "node --test tests/zipcloud.test.mjs",
-    "test:r1:browser": "node tests/r1-browser.mjs",
+    "test:r1:browser": "playwright test tests/r1-browser.mjs",
     "test:r2": "node --test tests/address-form.test.mjs",
-    "test:r2:browser": "node tests/r2-browser.mjs",
+    "test:r2:browser": "playwright test tests/r2-browser.mjs",
     "test:r3": "node --test tests/http.test.mjs tests/zipcloud.test.mjs tests/address-form.test.mjs",
-    "test:r3:browser": "node tests/r3-browser.mjs",
-    "test:r4:browser": "node tests/r4-browser.mjs",
+    "test:r3:browser": "playwright test tests/r3-browser.mjs",
+    "test:r4:browser": "playwright test tests/r4-browser.mjs",
+    "test:r5:browser": "playwright test tests/r5-browser.mjs",
+    "test:r6": "node --test tests/postal-code.test.mjs tests/address-form.test.mjs tests/zipcloud.test.mjs",
+    "test:r6:browser": "playwright test tests/r6-browser.mjs",
+    "test:common:browser": "playwright test tests/common-browser.mjs",
     "test:hosting-files": "node tests/hosting-files.mjs",
-    "lint": "eslint js/",
-    "lint:fix": "eslint js/ --fix"
+    "lint": "eslint js/ tests/ playwright.config.mjs",
+    "lint:fix": "eslint js/ tests/ playwright.config.mjs --fix",
+    "test": "npm run lint && npm run test:unit && npm run test:browser",
+    "test:unit": "node --test tests/*.test.mjs",
+    "test:browser": "playwright test",
+    "test:verify-failure": "node tests/verify-ci-failure.mjs",
+    "test:live:local": "node phase4_test.mjs",
+    "test:live:staging": "node staging_test.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",
     "eslint": "^9.0.0",
+    "firebase-tools": "15.34.1",
     "globals": "^15.0.0",
     "playwright": "^1.59.1"
   }

@@ -1,5 +1,5 @@
 /**
- * staging_test.mjs — ステージング URL 検証
+ * staging_test.mjs — 公開環境と実 API の手動接続確認（CI 対象外）
  * https://addressconversion-93436.web.app で全機能を確認する
  */
 import { chromium } from 'playwright';

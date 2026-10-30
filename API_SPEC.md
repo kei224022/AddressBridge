@@ -302,18 +302,33 @@ const result = await ZipCloud.lookup('1500002');
 
 #### `ZipCloud.normalizeZip(input)`
 
-入力文字列を7桁数字に正規化する（ハイフン除去）。
+NFKC 正規化と空白除去の後、7 桁数字または「3 桁-4 桁」の表記だけを 7 桁数字へ正規化する。
+ハイフンは ASCII の `-` と、NFKC で同じ文字になる全角 `－` に対応する。
+文字混在、桁不足・桁超過、ハイフンの重複・位置違い、`〒` やその他の記号は受け付けず、切り詰めて有効な番号にはしない。
 
 | 項目 | 内容 |
 |------|------|
 | 引数 | `input` {string} |
-| 戻り値 | {string} — ハイフンなし7桁。7桁未満は空文字列 |
+| 戻り値 | {string} — ハイフンなし7桁。不完全・不正な入力は空文字列 |
 
 ```javascript
 ZipCloud.normalizeZip('150-0002') // => '1500002'
 ZipCloud.normalizeZip('1500002')  // => '1500002'
 ZipCloud.normalizeZip('150-00')   // => ''
+ZipCloud.normalizeZip('１５０　－　０００２') // => '1500002'
+ZipCloud.normalizeZip('15000028') // => ''（切り詰めない）
+ZipCloud.normalizeZip('abc1500002') // => ''（文字を捨てない）
 ```
+
+#### `ZipCloud.formatZipInput(input)`
+
+入力表示を NFKC 正規化して空白を除去し、数字だけの入力には 4 桁目以降の前にハイフンを挿入する。
+桁超過や文字混在の値も保存し、入力欄で修正できるようにする（例: `15000028` → `150-00028`）。
+`address-form.js` はこの整形後に `normalizeZip()` が成功した場合だけ補完する。
+入力中の文字数制限は設けず、貼り付けた値が有効な番号に切り捨てられないようにする。
+IME 変換中は整形・補完を保留し、確定後に実行する。変換中は変換ボタンによる API 呼び出しも行わない。
+フォームの未入力と形式不正のメッセージを分け、形式不正では住所検証・翻訳・地図検索を開始しない。
+通常入力では 7 桁に達した時点で補完するため、その後 8 桁目を入力した場合は既に開始済みの要求を R-2 の仕組みで無効化する。
 
 ---
 
@@ -581,7 +596,7 @@ Formats.TW_DICT = {
 
 ### 4-6. map.js
 
-Leaflet 地図の操作モジュール。
+Google Maps 地図の操作モジュール。
 
 #### `MapController.init(elementId)`
 
@@ -609,13 +624,22 @@ MapController.init('map-container');
 MapController.show(35.6584, 139.7022, '東京都渋谷区渋谷1丁目2番3号');
 ```
 
+#### `MapController.showLoading()`
+
+前回の地図本体を隠し、枠の高さを保って「地図を検索しています…」を表示する。
+`map-section` の `data-state` を `loading`、`aria-busy` を `true` にする。
+待機・エラー表示は `map-container` の兄弟要素とし、Maps API の初期化で消えない構造にする。
+
 #### `MapController.hide()`
 
 地図エリアを非表示にする。
+`data-state` は `hidden`、`aria-busy` は `false` とする。
 
 #### `MapController.showError()`
 
 ジオコーディング失敗時のエラー表示に切り替える。
+古い地図と待機表示を隠し、`data-state` は `error`、`aria-busy` は `false` とする。
+`show()` の成功時は地図本体だけを表示し、`data-state` は `ready` とする。Maps API がまだ利用できない場合はエラー表示へ戻す。
 
 ---
 
@@ -628,8 +652,7 @@ MapController.show(35.6584, 139.7022, '東京都渋谷区渋谷1丁目2番3号')
 | イベント | ハンドラー | 処理概要 |
 |---------|-----------|---------|
 | `input-zip` の `input` | `onZipInput()` | ハイフン自動挿入、7桁で補完API呼び出し |
-| `btn-autocomplete` の `click` | `onAutocomplete()` | zipcloud 補完処理 |
-| `btn-convert` の `click` | `onConvert()` | バリデーション→検証→変換→地図→表示 |
+| `btn-convert` の `click` | `onConvert()` | バリデーション→検証→変換→結果表示→非同期の地図更新 |
 | 言語タブの `click` | `onTabChange(locale)` | 変換結果・プレビューの切り替え |
 | プレビュータブの `click` | `onPreviewChange(type)` | 封筒/はがき/伝票の切り替え |
 | コピーボタンの `click` | `onCopy(locale)` | クリップボードコピー |
@@ -638,36 +661,27 @@ MapController.show(35.6584, 139.7022, '東京都渋谷区渋谷1丁目2番3号')
 
 ```javascript
 async function onConvert() {
-  // 1. バリデーション
-  if (!validate()) return;
-
-  // 2. UI をローディング状態に
-  setLoading(true);
-
-  // 3. 住所検証
-  const validationResult = await ZipCloud.validate(zip, pref, city);
-  showWarning(validationResult === 'mismatch');
-
-  // 4. 変換処理
-  const result = Converter.convertAll(getAddressInput());
-
-  // 5. ジオコーディング（並行して実行）
-  const pos = await Geocoder.search(getAddressInput());
-
-  // 6. 結果表示
-  renderResults(result);
-  if (pos) {
-    MapController.show(pos.lat, pos.lon, buildJaLabel());
-  } else {
-    MapController.showError();
+  if (btnConvert.disabled || !form.validate()) return;
+  const requestId = ++conversionId; // 地図応答は変換開始時点で無効化する
+  const address = form.read();
+  setLoading(btnConvert, true, '変換中...');
+  warningEl.style.display = 'none';
+  MapController.showLoading();
+  try {
+    const validation = await ZipCloud.validate(address.zip, address.pref, address.city);
+    if (validation === 'mismatch') warningEl.style.display = '';
+    const converted = await convertAll(address);
+    results.render(address, converted);
+    document.getElementById('result-section').scrollIntoView({ behavior: 'smooth' });
+    void updateMap(address, requestId);
+  } finally {
+    setLoading(btnConvert, false); // 地図の完了を待たず再実行可能にする
   }
-
-  // 7. 結果エリアへスクロール
-  scrollToResults();
-
-  setLoading(false);
 }
 ```
+
+`updateMap()` は地図検索の成功・失敗・例外のいずれでも、要求 ID が現在の `conversionId` と一致するときだけ地図を更新する。
+結果の言語選択やプレビューには触れず、地図完了時のスクロールも行わない。
 
 ---
 
@@ -691,9 +705,9 @@ HTTP エラー・通信障害・不正 JSON は例外として呼び出し元に
 | Google Maps Geocoding | `search()` は `null` を返し、地図エラーを表示して住所・プレビューを表示する |
 
 DeepL の各言語は並行実行するため、言語数分の待機時間を直列には加算しない。
-現在の変換処理は住所検証 → 翻訳 → 地図検索の順で待つため、すべてが期限超過する場合は最大で約 15 秒の通信待機となる（ブラウザの処理・スケジューリング時間を除く）。
-`main.js` の `finally` で変換ボタンの待機表示を解除し、再実行できる状態へ戻す。
-地図より先に結果を表示する変更は R-5 で実施する。
+R-5 では住所検証 → 翻訳まで待って結果を表示し、変換ボタンを復帰させる。地図検索はその後に独立して最大 5 秒待つ。
+すべてが期限超過する場合、住所の表示待ちは最大で約 10 秒、地図の待機終了までは合計で約 15 秒となる（ブラウザの処理・スケジューリング時間を除く）。
+地図待機中に新たな変換を開始でき、古い要求の応答は新しい地図に反映しない。
 
 ---
 
@@ -708,6 +722,20 @@ JS ソース内の相対 import は維持し、Node.js のユニットテスト�
 移行後は同じ URL でも毎回再検証し、将来の通常更新でクエリーの変更を必須としない。
 
 本番デプロイを伴わない検証は `npm run test:r4:browser` で行う。配信後の実環境確認は `CLAUDE.md` のデプロイ手順に従う。
+
+---
+
+### 4-10. テスト用の通信・設定（R-7）
+
+通常の回帰テストは Playwright Test が起動するループバックの静的サーバーを使う。
+テストサーバーの `/js/config.js` は常にテスト用固定値を返し、個人用設定ファイルを読み出さない。
+検索・翻訳・地図の各レスポンスは固定住所データ、保留 Promise、エラー応答で再現する。
+Google Maps の読み込みスクリプトも固定応答にし、ネットワークへ実 API の要求を送らない。
+通常のブラウザテストでは未定義の外部 URL を遮断して失敗とし、R-4 の実キャッシュ検証では外部要求がないことを確認する。
+`npm test` はこの経路だけを使い、実 API の手動接続確認は `test:live:*` に分離する。
+共通確認では DeepL 用のダミーキー `ci-dummy` をテスト内で返し、7 言語分の成功レスポンスまたは HTTP 503 をモックする。
+建物名の翻訳成功・ローマ字へのフォールバック・建物名なしの各ケースを、改修前 `53498c8` の固定期待値と全文比較する。
+補助表記は韓国・台湾だけに表示し、コピー対象は全ロケールでメインの住所文字列とする。結果・封筒・はがき・伝票の各コピーボタンも同じメイン住所をコピーする。
 
 ---
 

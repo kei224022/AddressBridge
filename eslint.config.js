@@ -36,6 +36,30 @@ export default [
     },
   },
   {
+    files: ['tests/**/*.mjs', 'tests/**/*.js', 'playwright.config.mjs'],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: 'module',
+      globals: { ...globals.node, ...globals.browser },
+    },
+    rules: { 'no-console': 'off' },
+  },
+  {
+    files: ['tests/r*-browser.mjs', 'tests/common-browser.mjs'],
+    rules: {
+      'no-restricted-syntax': ['error',
+        {
+          selector: "CallExpression[callee.object.name='route'][callee.property.name='continue']",
+          message: 'Use route.fallback() to preserve the offline network boundary.',
+        },
+        {
+          selector: "CallExpression[callee.object.name='route'][callee.property.name='fetch']",
+          message: 'Use fixed fixtures instead of fetching an external API.',
+        },
+      ],
+    },
+  },
+  {
     ignores: ['node_modules/**', 'assets/**'],
   },
 ];

@@ -2,11 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { ZipCloud } from '../js/zipcloud.js';
 
-const record = {
-  zipcode: '1500002', prefcode: '13',
-  address1: '東京都', address2: '渋谷区', address3: '渋谷',
-  kana1: 'ﾄｳｷｮｳﾄ', kana2: 'ｼﾌﾞﾔｸ', kana3: 'ｼﾌﾞﾔ',
-};
+import { record } from './fixtures/addresses.mjs';
 const address = {
   zipcode: '1500002', prefcode: '13',
   pref: '東京都', city: '渋谷区', town: '渋谷',

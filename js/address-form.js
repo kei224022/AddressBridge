@@ -11,9 +11,19 @@ export function createAddressForm(showSnackbar) {
   let storedKana = { prefKana: '', cityKana: '', townKana: '' };
   let latestRequestId = 0;
   let addressRevision = 0;
-  let lastZip = inputZip.value.replace(/[^0-9]/g, '').slice(0, 7);
+  let lastZip = ZipCloud.formatZipInput(inputZip.value);
+  let composingZip = false;
 
   inputZip.addEventListener('input', onZipInput);
+  inputZip.addEventListener('compositionstart', () => {
+    composingZip = true;
+    latestRequestId++;
+    storedKana = { prefKana: '', cityKana: '', townKana: '' };
+  });
+  inputZip.addEventListener('compositionend', () => {
+    composingZip = false;
+    onZipInput();
+  });
   addressInputs.forEach(input => {
     input.addEventListener('input', () => { addressRevision++; });
   });
@@ -28,17 +38,20 @@ export function createAddressForm(showSnackbar) {
   inputPref.addEventListener('input', () => { storedKana.prefKana = ''; });
   inputCity.addEventListener('input', () => { storedKana.cityKana = ''; });
 
-  function onZipInput() {
-    const raw = inputZip.value.replace(/[^0-9]/g, '').slice(0, 7);
-    const formatted = raw.length > 3 ? `${raw.slice(0, 3)}-${raw.slice(3)}` : raw;
-    if (inputZip.value !== formatted) inputZip.value = formatted;
+  function onZipInput(event) {
     // 削除・桁不足・同じ番号への再入力でも、以前の要求を無効化する。
     latestRequestId++;
-    if (raw !== lastZip) {
+    if (composingZip || event?.isComposing) {
+      storedKana = { prefKana: '', cityKana: '', townKana: '' };
+      return;
+    }
+    const formatted = ZipCloud.formatZipInput(inputZip.value);
+    if (inputZip.value !== formatted) inputZip.value = formatted;
+    if (formatted !== lastZip) {
       storedKana = { prefKana: '', cityKana: '', townKana: '' };
     }
-    lastZip = raw;
-    if (raw.length === 7) doAutocomplete(latestRequestId);
+    lastZip = formatted;
+    if (ZipCloud.normalizeZip(formatted)) doAutocomplete(latestRequestId);
   }
 
   async function doAutocomplete(requestId) {
@@ -92,6 +105,9 @@ export function createAddressForm(showSnackbar) {
     for (const [key, el, msg] of fields) {
       if (!el.value.trim()) {
         showFieldError(key, msg);
+        valid = false;
+      } else if (key === 'zip' && (composingZip || !ZipCloud.normalizeZip(el.value))) {
+        showFieldError(key, '郵便番号は7桁の数字で入力してください（例: 150-0002）');
         valid = false;
       } else {
         clearFieldError(key);
