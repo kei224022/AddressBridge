@@ -123,17 +123,18 @@ NFKC 正規化・空白除去後に 7 桁数字／3 桁-4 桁だけを有効と�
 完了条件: API キーなしのクリーンな環境から同じ手順で検証でき、意図的に不具合を入れると CI が失敗する。
 
 検証済み: `npm ci`、`npm test`（単体 67 件・ブラウザ 53 件・Lint）、`npm run test:verify-failure`（個人用設定なしの正常動作・不具合検知・診断ファイル保存・サーバー停止）、`npm run test:hosting-files`（公開対象 19 ファイル）、`git diff --check`。
-GitHub Actions は push・pull request 時の実行と成果物保存を設定済み。リモートでの実行確認は次回 push 後に行う。
+GitHub Actions は push・pull request 時の実行と成果物保存を設定済み。`master` への push による [Tests の起動](https://github.com/kei224022/AddressBridge/actions/runs/41061235186)を確認した。最新の結果は [Actions の実行履歴](https://github.com/kei224022/AddressBridge/actions)で確認できる。
 
 ### 改修後の共通確認
 
 - [x] 全 9 言語と韓国・台湾の補助表記で、住所形式・プレビュー・コピー結果に意図しない変更がないことを確認する
 - [x] `npm run lint` と各改修の回帰テストを実行する
 - [x] `TEST_SPEC.md`、`API_SPEC.md`、`CLAUDE.md` を変更した動作・構成に合わせて更新する
-- [ ] 変更をコミットして `master` にマージし、リモートとの同期と未コミット変更の有無を確認する
+- [x] 変更をコミットして `master` にマージし、リモートとの同期と未コミット変更の有無を確認する
 
 共通確認: `npm run test:common:browser`（28 件）。改修前 `53498c8` の固定期待値に対し、建物名あり・なし・翻訳成功の 3 パターンで全 9 言語、韓国・台湾の補助表記、封筒・はがき・伝票、差出人欄を全文比較した。通常コピー 108 回、Clipboard API 失敗時のフォールバック 36 回も実クリップボードで一致を確認した。テストは `npm test` と GitHub Actions に組み込み済み。
 全体確認: `npm run lint`、`npm run test:unit`（67 件）、`npm run test:browser -- --grep-invert Common:`（R-1〜R-6 の 53 件）、共通確認 28 件、`npm run test:verify-failure`、`npm run test:hosting-files`（19 ファイル）、`git diff --check` が成功した。
+コミット `1dc6e6b` を `master` にマージ（`3cf6f7d`）して push 済み。リモートを再取得し、`master...origin/master` の差分が `0 / 0`、作業ツリーに未コミット変更がないことを確認してから本項目を完了にした。
 
 ---
 
